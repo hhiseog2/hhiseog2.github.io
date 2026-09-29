@@ -5,8 +5,12 @@
 
 :root{
   /* 사용자 요청: reference 폴더의 Franklin Gothic Medium, 모든 글자 영어 */
-  --font-heading:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
-  --font-body:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
+  --font-heading:"So What Franklin","Franklin Gothic Medium","Arial Narrow","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-body:"So What Franklin","Franklin Gothic Medium","Arial Narrow","Apple SD Gothic Neo","Malgun Gothic",sans-serif;   /* 한글 이름은 가이드의 한글 글꼴로 */
+  /* 사용자 요청(rq-20260929-2ef0a3f5 R5): 읽어야 하는 글은 본문 16px · 보조 14px 이상, 설명 행간 약 1.5 (가이드 15 · 13 · 1.7 에서 바꿈) */
+  --size-body:16px;
+  --size-small:14px;
+  --line-body:1.5;
   /* 사용자 선택: 인쇄색 = 포스터 파랑, 바탕 = 밤(먹 바탕 + 크림 글자) */
   --ink:#1d1d1f;               /* 먹: 바탕·만화 선 */
   --paper:#efe6d0;             /* 크림 종이: 글자·만화 종이 (먹 위 13.5:1) */
@@ -32,7 +36,7 @@
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;background:var(--ink)}
-body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-spacing:.14em;letter-spacing:.01em}  /* this Franklin cut has a narrow space; open it up for lower-case sentences */
+body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-break:keep-all;overflow-wrap:anywhere;word-spacing:.14em;letter-spacing:.01em}  /* this Franklin cut has a narrow space; open it up for lower-case sentences */
 a{color:inherit;text-underline-offset:3px}
 ul,ol{list-style:none;margin:0;padding:0}
 h1,h2,p{margin:0}
@@ -102,7 +106,7 @@ header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center
 /* 만화 칸 · 스크린톤: 크림 종이 위 먹선, 톤은 먹 또는 파랑 */
 .panel{position:relative;overflow:hidden;border:var(--ink-line) solid var(--ink);background-color:var(--paper);color:var(--ink);outline:1px solid var(--paper)}
 .cap{position:absolute;left:0;top:0;z-index:1;padding:4px var(--space-1);background:var(--paper);color:var(--ink);border-right:var(--ink-line) solid var(--ink);border-bottom:var(--ink-line) solid var(--ink);
-  font-size:var(--size-small);line-height:1.4;text-transform:uppercase;letter-spacing:.06em}
+  font-size:var(--size-small);line-height:1.4;letter-spacing:.02em}
 /* caption at the bottom-left when the artwork has its own lettering in the top-left (Work 04) */
 .cap-bottom>.cap{top:auto;bottom:0;border-bottom:0;border-top:var(--ink-line) solid var(--ink)}
 .cap.plain{position:static;padding:0 0 var(--space-1);border:0;background:none;color:var(--paper)}
@@ -123,17 +127,12 @@ header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center
 html:not(.book-ready) .poster-head{padding-bottom:var(--space-4)}
 .panels{display:grid;grid-template-columns:1fr;gap:var(--space-1)}
 .panel.tall{aspect-ratio:4/5}
-.panel.wide{aspect-ratio:16/10}
-@media (min-width:768px){.balloon{padding:var(--space-4) var(--space-6)}.panels{grid-template-columns:1fr 1fr}.panel.wide{grid-column:1/-1}}
-.balloon{position:relative;max-width:calc(100% - var(--space-4));padding:var(--space-3) var(--space-4);background:var(--paper);color:var(--ink);border:var(--ink-line) solid var(--ink);border-radius:50%;
-  font-size:var(--size-display-fluid);line-height:1;text-transform:uppercase;letter-spacing:.04em}
-.balloon::after{content:"";position:absolute;left:28%;bottom:-28px;width:36px;height:36px;background:var(--paper);border-right:var(--ink-line) solid var(--ink);
-  border-bottom:var(--ink-line) solid var(--ink);transform:skewX(30deg) rotate(20deg)}
+@media (min-width:768px){.panels{grid-template-columns:1fr 1fr}}
 
 /* 5. 큰 글자 판 — 파랑 한 색 인쇄 위 먹 글자(포스터) */
-.collage{display:grid;grid-template-columns:1fr;gap:var(--space-1);padding:0 var(--space-1)}
-.collage .panel{aspect-ratio:4/5}
-.board{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--space-5);padding:var(--space-5) var(--space-3) var(--space-3);background:var(--blue);color:var(--ink);overflow:hidden}
+.collage{display:grid;grid-template-columns:1fr}
+.board{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--space-5);min-height:clamp(360px,42vw,520px);background:var(--blue);color:var(--ink);overflow:hidden;
+  padding:var(--space-5) max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter))) var(--space-3)}
 .board::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.22;mix-blend-mode:multiply;pointer-events:none}
 .board > *{position:relative;z-index:1}
 .mega{font-size:clamp(64px, 14vw, 216px);line-height:.86;text-transform:uppercase;font-weight:400;letter-spacing:-.01em}
@@ -141,20 +140,17 @@ html:not(.book-ready) .poster-head{padding-bottom:var(--space-4)}
 .fit{display:inline-block;white-space:nowrap;align-self:flex-start;max-width:none}
 @media (min-width:768px){.mega.fit br{display:none}}
 .board a:focus-visible,.board .btn:focus-visible{outline-color:var(--ink)}
-@media (min-width:768px){.collage{grid-template-columns:1fr 1fr}.board{aspect-ratio:4/5}}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--button-height);padding:0 var(--space-4);background:var(--blue);color:var(--ink);
   border:2px solid var(--blue);border-radius:var(--button-radius);text-transform:uppercase;letter-spacing:.06em;text-decoration:none;font:inherit;cursor:pointer}
 .btn.mail{text-transform:none;letter-spacing:.02em}
+/* email + copy: the address stays as still text on the button; the copy result is written next to it (role=status) */
+.mail-row{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.mail-row .btn.ghost-ink{min-width:112px}
+.copy-status{margin-top:var(--space-1);min-height:1.5em;color:var(--paper);max-width:40em}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink);align-self:flex-start}
 .btn:hover{background:var(--paper);border-color:var(--paper)}
 .btn.ghost:hover{background:var(--ink);color:var(--blue);border-color:var(--ink)}
-
-/* 6. 4열 줄 */
-.archive{padding:var(--space-7) var(--space-1) 0}
-.row{display:grid;grid-template-columns:repeat(var(--grid-mobile),minmax(0,1fr));gap:var(--space-4) var(--space-1)}
-@media (min-width:900px){.row{grid-template-columns:repeat(var(--grid-pc),minmax(0,1fr))}}
-.frame{aspect-ratio:1/1;border:var(--ink-line) solid var(--ink);background-color:var(--paper);outline:1px solid var(--paper)}
 
 /* 7. 연락 · 아래 링크 줄 */
 .contact{max-width:var(--container);margin:0 auto;padding:var(--space-section) var(--gutter)}
@@ -174,15 +170,22 @@ footer.site p{color:var(--paper-muted)}
 .book-stage:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
 .book-stage canvas{display:block}
 .book-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-2);max-width:var(--container);margin:var(--space-3) auto 0;padding:var(--space-2) var(--gutter) 0;border-top:1px solid var(--color-line)}
-.book-info{text-align:center}
-.book-status{text-transform:uppercase;letter-spacing:.06em}
+.book-info{display:flex;flex-direction:column;align-items:center;gap:var(--space-1);text-align:center}
+.book-status{letter-spacing:.02em}
+/* contents: the same works list, opens the chosen work at once. The open work is marked by a shape and a word, not colour only */
+.book-toc{grid-column:1/-1}
+.book-toc ol{max-width:640px;margin:0 auto;border-top:1px solid var(--color-line)}
+.book-toc a{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:var(--space-1);min-height:48px;padding:var(--space-1) 0;border-bottom:1px solid var(--color-line);text-decoration:none}
+.book-toc a:hover .toc-title{text-decoration:underline}
+.book-toc .toc-now{white-space:nowrap;font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
+.book-toc a[aria-current] .toc-now::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;background:currentColor}
+.book-toc .toc-page{color:var(--paper-muted);font-size:var(--size-small)}
+.book-toc a[aria-current] .toc-title{text-decoration:underline;text-decoration-thickness:2px}
 .book-hint{color:var(--paper-muted);font-size:var(--size-small)}
 .btn.ghost-ink{background:transparent;color:var(--paper);border:2px solid var(--paper);padding:0 var(--space-3)}
 .btn.ghost-ink:hover{background:var(--paper);color:var(--ink);border-color:var(--paper)}
 .btn[disabled],.btn[disabled]:hover{background:transparent;color:var(--paper-muted);border-color:var(--paper-muted);border-style:dashed;cursor:not-allowed}
-@media (max-width:600px){.book-bar{grid-template-columns:1fr 1fr}.book-info{grid-column:1/-1;grid-row:1}.btn.ghost-ink{padding:0 var(--space-1);white-space:nowrap}}
-html.book-ready .work .panels,html.book-ready .collage>.panel,html.book-ready #archive{display:none}
-html.book-ready .collage{grid-template-columns:1fr;padding:0}
-html.book-ready .board{aspect-ratio:auto;min-height:clamp(360px,42vw,520px);padding-left:max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter)));padding-right:max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter)))}
+@media (max-width:600px){.book-bar{grid-template-columns:1fr 1fr}.book-info{grid-column:1/-1;grid-row:1}.book-bar .btn.ghost-ink{padding:0 var(--space-1);white-space:nowrap}.book-toc a{grid-template-columns:72px 1fr auto}}
+html.book-ready .work .panels{display:none}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

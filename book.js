@@ -1,7 +1,8 @@
 // So What: 3D comic book.
-// Reads the comic panels already in the page (Work 01-06, Archive 01-04), paints each one to a page
-// texture (with the panel's artwork when it has an <img>) and binds them into one book. Pages bend on the CPU: every row of the sheet is integrated
-// from the spine with a varying angle, so the paper keeps its length while it curls.
+// Reads the works list already in the page (.panels: order, title, artwork, #work-NN target — the one place that holds them),
+// paints each work to a page texture and binds cover + contents page + works + back cover into one book. Pages bend on the CPU:
+// every row of the sheet is integrated from the spine with a varying angle, so the paper keeps its length while it curls.
+// The Contents button lists the same works and opens the chosen one at once (no page-by-page turning on the way).
 // If WebGL or this script is missing, the original panel grid stays as it is.
 
 const book = document.querySelector('.book');
@@ -41,34 +42,34 @@ async function init() {
   ]);
 
   const INK = '#1d1d1f', BLUE = '#3d8fe0', PAPER = '#efe6d0';   // style.css --ink / --blue / --paper
+  const FONT = '"So What Franklin", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';   // Franklin for Latin, the guide's Korean fonts for 한글
   const W = 1, H = 1.25;              // one page, 4:5 like the panels
   const NX = 48, NZ = 24;             // subdivisions (spine -> edge, top -> bottom)
   const T = 0.0025;                   // one sheet's thickness
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // ---------- pages from the existing markup ----------
-  const panels = [...document.querySelectorAll('.panels .panel, .collage .panel, .archive .thumb')].map((el) => {
-    const toneEl = el.classList.contains('thumb') ? el.querySelector('.frame') : el;
+  // ---------- pages from the works list ----------
+  const works = [...document.querySelectorAll('.panels .panel')].map((el) => {
+    const label = el.querySelector('.cap').textContent.trim();          // "01. Bill Evans — 빌 에반스"
+    const m = label.match(/^(\d+)\.\s*(.+?)\s*—\s*(.+)$/) || [null, '', label, ''];
     return {
-      kind: 'panel',
-      label: (el.querySelector('.cap') || {}).textContent.trim(),
-      tone: [...toneEl.classList].find((c) => c.startsWith('tone-')),
-      shape: el.classList.contains('thumb') ? 'square' : el.classList.contains('wide') ? 'wide' : 'tall',
-      balloon: el.querySelector('.balloon') ? el.querySelector('.balloon').textContent.trim() : '',
+      kind: 'panel', id: el.id, label, no: m[1], name: m[2], nameKo: m[3],
+      tone: [...el.classList].find((c) => c.startsWith('tone-')),
       capBottom: el.classList.contains('cap-bottom'),
       art: el.querySelector('img') ? el.querySelector('img').currentSrc || el.querySelector('img').src : '',
     };
   });
-  // the user's artwork in a panel: load it before any page is painted (the grid's own <img> is lazy and hidden once the book is up)
-  await Promise.all(panels.filter((p) => p.art).map((p) => {
+  // the user's artwork: load it before any page is painted (the grid's own <img> is lazy and hidden once the book is up)
+  await Promise.all(works.filter((p) => p.art).map((p) => {
     const img = new Image();
     img.src = p.art;
     return img.decode().then(() => { p.img = img; }, () => {});   // failed to load: the panel keeps its screen tone
   }));
-  const pages = [{ kind: 'cover', label: 'Cover' }, ...panels, { kind: 'back', label: 'Back cover' }];
-  if (pages.length % 2) pages.splice(pages.length - 1, 0, { kind: 'blank', label: 'Blank page' });
+  // cover, contents page, one page per work, back cover. Only pages with a job are in the book (no decorative or blank pages).
+  const pages = [{ kind: 'cover', label: 'Cover' }, { kind: 'contents', label: 'Contents' }, ...works, { kind: 'back', label: 'Back cover' }];
+  if (pages.length % 2) pages.splice(pages.length - 1, 0, { kind: 'blank', label: 'Blank page' });   // only if the number of works turns odd one day
   const N = pages.length / 2;         // sheets
-  const archiveSpread = Math.ceil((panels.findIndex((p) => /archive/i.test(p.label)) + 1) / 2);
+  works.forEach((w) => { w.page = pages.indexOf(w); });
 
   // ---------- renderer / scene ----------
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -157,9 +158,9 @@ async function init() {
       if (page.kind === 'cover') {
         g.textAlign = 'left'; g.textBaseline = 'alphabetic';
         let fs = 200 * u;
-        g.font = `${fs}px "So What Franklin"`;
+        g.font = `${fs}px ${FONT}`;
         fs *= (TEX_W - m * 2) / measureSpaced(g, 'PORTFOLIO', -0.01);   // the title runs the full width
-        g.font = `${fs}px "So What Franklin"`;
+        g.font = `${fs}px ${FONT}`;
         spaced(g, 'PORTFOLIO', m, m + fs * 0.74, -0.01);
         const bx = m, by = m + fs * 0.9, bw = TEX_W - m * 2, bh = TEX_H * 0.5;
         g.save(); g.beginPath(); g.rect(bx, by, bw, bh); g.clip();
@@ -168,18 +169,19 @@ async function init() {
         for (let r = 6 * u; r < Math.hypot(bw, bh); r += 9 * u) { g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); }
         g.restore();
         g.lineWidth = 3 * u; g.strokeRect(bx, by, bw, bh);
-        g.font = `${Math.round(19 * u)}px "So What Franklin"`; g.textBaseline = 'top';
-        const cols = [['WORK AND', 'ARCHIVE'], ['SIDE A', 'WORK 01 TO 06'], ['SIDE B', 'ARCHIVE 01 TO 04']];
-        const cw = (TEX_W - m * 2) / 3, ty = by + bh + 26 * u;
+        g.font = `${Math.round(19 * u)}px ${FONT}`; g.textBaseline = 'top';
+        const cols = [['A DESIGNER &', 'DEVELOPER PORTFOLIO'], ['WORKS', `${works[0].no} TO ${works[works.length - 1].no}`]];
+        const cw = (TEX_W - m * 2) / 2, ty = by + bh + 26 * u;
         cols.forEach((lines, i) => lines.forEach((t, j) => spaced(g, t, m + cw * i, ty + j * 25 * u, 0.06)));
       } else {
         g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.font = `${Math.round(24 * u)}px "So What Franklin"`;
+        g.font = `${Math.round(24 * u)}px ${FONT}`;
         spaced(g, 'DESIGN & CODE', TEX_W / 2, TEX_H * 0.9, 0.12);
       }
     } else {
       g.fillStyle = PAPER; g.fillRect(0, 0, TEX_W, TEX_H);
       if (page.kind === 'panel') paintPanel(g, page, u);
+      if (page.kind === 'contents') paintContents(g, u);
     }
     // gutter: a little shade where the paper runs into the spine, and a hint at the outer edge
     const gw = TEX_W * 0.07;
@@ -208,11 +210,11 @@ async function init() {
     // the panel keeps its own ratio inside the page margin
     const m = TEX_W * 0.07;
     const iw = TEX_W - m * 2, ih = TEX_H - m * 2;
-    const ratio = page.shape === 'wide' ? 10 / 16 : page.shape === 'square' ? 1 : 5 / 4;
+    const ratio = 5 / 4;
     let pw = iw, ph = iw * ratio;
     if (ph > ih) { ph = ih; pw = ih / ratio; }
     const px = (TEX_W - pw) / 2, py = (TEX_H - ph) / 2;
-    const orig = page.shape === 'wide' ? 1440 : page.shape === 'square' ? 350 : 720; // css width of the panel on the site
+    const orig = 720;                  // css width of the panel on the site
     const k = pw / orig;               // texture px per css px
     g.save();
     g.beginPath(); g.rect(px, py, pw, ph); g.clip();
@@ -226,13 +228,12 @@ async function init() {
     const line = Math.max(2, 3 * k * (orig / 720) * 1.2);
     g.lineWidth = line; g.strokeStyle = INK;
     g.strokeRect(px + line / 2, py + line / 2, pw - line, ph - line);
-    if (page.balloon) paintBalloon(g, page.balloon, px + pw / 2, py + ph / 2, pw, u);
-    // caption chip, as on the site
-    const fs = 13 * u * 1.5;
-    g.font = `${fs}px "So What Franklin"`;
+    // caption chip, as on the site: the work's title in its own case (no capitals for names)
+    const fs = 14 * u * 1.5;
+    g.font = `${fs}px ${FONT}`;
     g.textBaseline = 'middle'; g.textAlign = 'left';
-    const text = page.label.toUpperCase();
-    const tw = measureSpaced(g, text, 0.06);
+    const text = page.label;
+    const tw = measureSpaced(g, text, 0.02);
     const padX = 8 * u * 1.5, chipH = fs * 1.4 + 8 * u * 1.5;
     const cy = page.capBottom ? py + ph - chipH - line : py;   // top-left, or bottom-left (.cap-bottom)
     g.fillStyle = PAPER; g.fillRect(px, cy, tw + padX * 2 + line, chipH + line);
@@ -240,7 +241,32 @@ async function init() {
     g.fillRect(px + tw + padX * 2, cy, line, chipH + line);
     g.fillRect(px, page.capBottom ? cy : cy + chipH, tw + padX * 2 + line, line);
     g.lineWidth = line; g.strokeRect(px + line / 2, py + line / 2, pw - line, ph - line);
-    spaced(g, text, px + padX + line / 2, cy + chipH / 2 + (page.capBottom ? line : line / 2), 0.06);
+    spaced(g, text, px + padX + line / 2, cy + chipH / 2 + (page.capBottom ? line : line / 2), 0.02);
+  }
+
+  // the printed contents page: the same works list, with the page each one is on
+  function paintContents(g, u) {
+    const m = TEX_W * 0.1, right = TEX_W - m;
+    g.fillStyle = INK; g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+    let fs = 120 * u;
+    g.font = `${fs}px ${FONT}`;
+    fs *= (right - m) / measureSpaced(g, 'CONTENTS', -0.01);   // the title runs the full width, like the cover
+    g.font = `${fs}px ${FONT}`;
+    const top = m + fs * 0.74;
+    spaced(g, 'CONTENTS', m, top, -0.01);
+    g.fillStyle = BLUE; g.fillRect(m, top + 18 * u, right - m, 6 * u);   // one blue printed rule
+    g.fillStyle = INK;
+    const row = (TEX_H - (top + 60 * u) - m) / works.length;
+    works.forEach((w, i) => {
+      const y = top + 60 * u + row * i;
+      g.fillRect(m, y, right - m, Math.max(1, 1.5 * u));                // ink line between entries
+      g.textAlign = 'left';
+      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, w.no, m, y + 40 * u, 0.04);
+      g.font = `${Math.round(38 * u)}px ${FONT}`; spaced(g, w.name, m + 64 * u, y + 44 * u, 0);
+      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, w.nameKo, m + 64 * u, y + 78 * u, 0);
+      g.textAlign = 'right';
+      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, `p. ${w.page + 1}`, right, y + 40 * u, 0.04);
+    });
   }
 
   function measureSpaced(g, text, em) {
@@ -288,26 +314,6 @@ async function init() {
       }
       default: break;
     }
-  }
-
-  function paintBalloon(g, text, cx, cy, pw, u) {
-    const fs = Math.min(45 * u * 1.1, pw * 0.1);
-    g.font = `${fs}px "So What Franklin"`;
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    const t = text.toUpperCase();
-    const tw = measureSpaced(g, t, 0.04);
-    const rx = tw / 2 + fs * 1.4, ry = fs * 1.1;
-    const line = 3 * u * 1.2;
-    // tail
-    g.fillStyle = PAPER; g.strokeStyle = INK; g.lineWidth = line;
-    g.beginPath();
-    g.moveTo(cx - rx * 0.28, cy + ry * 0.7);
-    g.lineTo(cx - rx * 0.22, cy + ry + fs * 0.9);
-    g.lineTo(cx - rx * 0.02, cy + ry * 0.8);
-    g.fill(); g.stroke();
-    g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.fillStyle = INK;
-    spaced(g, t, cx, cy + fs * 0.04, 0.04);
   }
 
   function contactTexture() {
@@ -593,28 +599,37 @@ async function init() {
     wake();
   }
 
-  function goTo(spread) {
+  // open the book straight at page i (no turning through the pages in between). i odd = left page, i even = right page.
+  function goToPage(i) {
     finishNow();
-    k = Math.max(0, Math.min(N, spread));
-    focus = k === 0 ? 1 : -1;
+    if (i <= 0) { k = 0; focus = 1; }
+    else if (i >= pages.length - 1) { k = N; focus = -1; }
+    else { k = Math.ceil(i / 2); focus = i % 2 ? -1 : 1; }
     trimTextures(); announce(); wake();
+  }
+
+  // pages on screen now: both pages of an open spread, or the one page a phone looks at
+  function visiblePages() {
+    if (k === 0) return [0];
+    if (k === N) return [pages.length - 1];
+    if (single) return [focus < 0 ? 2 * k - 1 : 2 * k];
+    return [2 * k - 1, 2 * k];
   }
 
   // ---------- status + buttons ----------
   const status = book.querySelector('.book-status');
   const prev = book.querySelector('.book-prev'), next = book.querySelector('.book-next');
+  const total = pages.length;
   function announce() {
+    const vis = visiblePages();
     let text;
-    if (k === 0) text = 'Cover';
-    else if (k === N) text = 'Back cover';
-    else if (single) {
-      const i = focus < 0 ? 2 * k - 1 : 2 * k;
-      text = `${pages[i].label}, page ${i + 1} of ${pages.length}`;
-    } else text = `${pages[2 * k - 1].label} and ${pages[2 * k].label}`;
+    if (vis.length === 1) text = `${pages[vis[0]].label}, page ${vis[0] + 1} of ${total}`;
+    else text = `Pages ${vis[0] + 1} and ${vis[1] + 1} of ${total}: ${pages[vis[0]].label} / ${pages[vis[1]].label}`;
     status.textContent = text;
     book.dataset.spread = String(k);
     prev.disabled = k === 0;
     next.disabled = k === N;
+    markContents(vis);
   }
   prev.addEventListener('click', () => turn(-1));
   next.addEventListener('click', () => turn(1));
@@ -622,12 +637,62 @@ async function init() {
     if (e.key === 'ArrowRight') { e.preventDefault(); turn(1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); turn(-1); }
   });
-  document.querySelectorAll('a[href="#archive"]').forEach((a) => a.addEventListener('click', (e) => {
+
+  // ---------- contents ----------
+  // built from the same works list; each entry is a real link (#work-NN) that opens its page at once
+  const tocToggle = book.querySelector('.book-toc-toggle');
+  const toc = book.querySelector('.book-toc');
+  const tocList = toc.querySelector('ol');
+  works.forEach((w) => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = `#${w.id}`;
+    a.dataset.page = String(w.page);
+    a.innerHTML = '<span class="toc-now" aria-hidden="true"></span><span class="toc-title"></span><span class="toc-page"></span>';
+    a.querySelector('.toc-title').textContent = w.label;
+    a.querySelector('.toc-page').textContent = `p. ${w.page + 1}`;
+    li.appendChild(a);
+    tocList.appendChild(li);
+  });
+  const tocLinks = [...tocList.querySelectorAll('a')];
+  function markContents(vis) {
+    for (const a of tocLinks) {
+      const on = vis.includes(Number(a.dataset.page));
+      if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+      a.querySelector('.toc-now').textContent = on ? 'Open' : '';
+    }
+  }
+  function openContents(open) {
+    toc.hidden = !open;
+    tocToggle.setAttribute('aria-expanded', String(open));
+  }
+  tocToggle.addEventListener('click', () => openContents(toc.hidden));
+  book.querySelector('.book-bar').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !toc.hidden) { e.preventDefault(); openContents(false); tocToggle.focus(); }
+  });
+  function openWork(id, scroll) {
+    const w = works.find((x) => x.id === id);
+    if (!w) return false;
+    goToPage(w.page);
+    history.replaceState(null, '', `#${id}`);
+    if (scroll) book.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' });
+    return true;
+  }
+  tocList.addEventListener('click', (e) => {
+    const a = e.target.closest('a');
+    if (!a) return;
     e.preventDefault();
-    goTo(archiveSpread);
-    history.replaceState(null, '', '#archive');
-    book.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' });
-  }));
+    openWork(a.getAttribute('href').slice(1), false);
+    openContents(false);
+    tocToggle.focus();
+  });
+  // any other link to a work (#work-NN) also opens the book there
+  document.querySelectorAll('a[href^="#work-"]').forEach((a) => {
+    if (tocList.contains(a)) return;
+    a.addEventListener('click', (e) => { if (openWork(a.getAttribute('href').slice(1), true)) e.preventDefault(); });
+  });
+  // the address changed to a work without a reload (typed, pasted or a link elsewhere): follow it
+  window.addEventListener('hashchange', () => { if (location.hash.startsWith('#work-')) openWork(location.hash.slice(1), true); });
 
   // ---------- pointer ----------
   const ray = new THREE.Raycaster();
@@ -827,6 +892,8 @@ async function init() {
   // a phone picks the book up from its cover; wide screens open on the first spread
   book.hidden = false;
   if (stage.clientWidth < 600) { k = 0; focus = 1; }
+  const startWork = works.find((w) => `#${w.id}` === location.hash);
+  if (startWork) { single = stage.clientWidth < 600; k = Math.ceil(startWork.page / 2); focus = startWork.page % 2 ? -1 : 1; }
   trimTextures();
   announce();
   document.documentElement.classList.add('book-ready');

@@ -24,7 +24,6 @@
     <summary><span class="bars" aria-hidden="true"></span><span class="menu-label">Menu</span></summary>
     <nav aria-label="Main menu"><ul>
       <li><a href="#work">Work</a></li>
-      <li><a href="#archive">Archive</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul></nav>
   </details>
@@ -51,62 +50,55 @@
     <div class="poster-head">
       <div class="credits">
         <p>A designer &amp; developer portfolio</p>
-        <p>Side A<br>Work 01 to 06</p>
-        <p>Side B<br>Archive 01 to 04</p>
+        <p>Works<br>01 to 05</p>
       </div>
       <h2 id="work-title" class="sr-only">Work</h2>
     </div>
-    <!-- 3D comic book (book.js). It reads the panels below; without WebGL the panels stay as they are. -->
+    <!-- 3D comic book (book.js): cover, a contents page, one page per work, back cover.
+         It reads the works list below — the one place that holds the order, names, images and link targets.
+         Without WebGL the list stays as a plain grid of panels. -->
     <div class="book" hidden>
       <div class="book-stage" tabindex="0" role="group" aria-roledescription="comic book" aria-label="Comic book. Drag a page corner, or use the left and right arrow keys, to turn pages."></div>
       <div class="book-bar">
         <button class="btn ghost-ink book-prev" type="button">Previous page</button>
         <div class="book-info">
+          <button class="btn ghost-ink book-toc-toggle" type="button" aria-expanded="false" aria-controls="book-toc">Contents</button>
           <p class="book-status" aria-live="polite"></p>
           <p class="book-hint">Drag a page corner to turn it</p>
         </div>
         <button class="btn ghost-ink book-next" type="button">Next page</button>
+        <nav class="book-toc" id="book-toc" aria-label="Contents" hidden><ol></ol></nav>
       </div>
     </div>
+    <!-- The works, in book order. id = link target (#work-01 …), .cap = the title shown in the book, the contents and the grid. -->
     <ol class="panels">
-      <li class="panel tall tone-dots"><p class="cap">Work 01</p><img src="images/work-01.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of a man in glasses and a dark suit, looking down"></li>
-      <li class="panel tall tone-lines"><p class="cap">Work 02</p><img src="images/work-02.jpg" width="1080" height="1389" loading="lazy" decoding="async" alt="Ink portrait of a young trumpeter in black, holding his trumpet"></li>
-      <li class="panel wide tone-key">
-        <p class="cap">Work 03</p>
-        <p class="balloon" aria-hidden="true">So what?</p>
-      </li>
-      <li class="panel tall tone-hatch cap-bottom"><p class="cap">Work 04</p><img src="images/work-04.jpg" width="1080" height="1389" loading="lazy" decoding="async" alt="Ink poster of Miles Davis playing the trumpet, with his name at the top"></li>
-      <li class="panel tall tone-blue"><p class="cap">Work 05</p><img src="images/work-05.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of a trumpeter in profile, eyes closed, holding his trumpet against his chest"></li>
+      <li class="panel tall tone-dots" id="work-01"><p class="cap">01. Bill Evans — 빌 에반스</p><img src="images/work-01.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of Bill Evans in glasses and a dark suit, looking down"></li>
+      <li class="panel tall tone-lines" id="work-02"><p class="cap">02. Chet Baker — 쳇 베이커</p><img src="images/work-02.jpg" width="1080" height="1389" loading="lazy" decoding="async" alt="Ink portrait of Chet Baker in black, holding his trumpet"></li>
+      <li class="panel tall tone-hatch cap-bottom" id="work-03"><p class="cap">03. Miles Davis — 마일스 데이비스</p><img src="images/work-04.jpg" width="1080" height="1389" loading="lazy" decoding="async" alt="Ink poster of Miles Davis playing the trumpet, with his name at the top"></li>
+      <li class="panel tall tone-blue" id="work-04"><p class="cap">04. Clifford Brown — 클리포드 브라운</p><img src="images/work-05.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of Clifford Brown in profile, eyes closed, holding his trumpet against his chest"></li>
+      <li class="panel tall tone-dots-dense" id="work-05"><p class="cap">05. John Coltrane — 존 콜트레인</p><img src="images/work-06.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of John Coltrane playing the saxophone, seen close up from the side"></li>
     </ol>
   </section>
 
   <section class="collage" aria-labelledby="collage-title">
-    <div class="panel tone-dots-dense"><p class="cap">Work 06</p><img src="images/work-06.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of a saxophonist playing, seen close up from the side"></div>
     <div class="board">
       <h2 id="collage-title" class="mega fit">Design <br>&amp; Code</h2>
       <a class="btn ghost" href="#contact">Get in touch</a>
       <div class="credits">
         <p>Drawn in ink,<br>played in blue</p>
-        <a href="#work">Side A: Work</a>
-        <a href="#archive">Side B: Archive</a>
+        <a href="#work">Works 01 to 05</a>
       </div>
     </div>
-  </section>
-
-  <section id="archive" class="archive" aria-labelledby="archive-title">
-    <h2 id="archive-title" class="sr-only">Archive</h2>
-    <ul class="row">
-      <li class="thumb"><p class="cap plain">Archive 01</p><div class="frame tone-dots"></div></li>
-      <li class="thumb"><p class="cap plain">Archive 02</p><div class="frame tone-lines"></div></li>
-      <li class="thumb"><p class="cap plain">Archive 03</p><div class="frame tone-hatch"></div></li>
-      <li class="thumb"><p class="cap plain">Archive 04</p><div class="frame tone-blue"></div></li>
-    </ul>
   </section>
 
   <section id="contact" class="contact" aria-labelledby="contact-title">
     <h2 id="contact-title" class="fit">Contact</h2>
     <p>Have a project in mind? Send an email and let's talk.</p>
-    <a class="btn mail" href="mailto:hhiseog2@gmail.com">Email hhiseog2@gmail.com</a>
+    <div class="mail-row">
+      <a class="btn mail" href="mailto:hhiseog2@gmail.com">Email&nbsp;<span class="mail-addr">hhiseog2@gmail.com</span></a>
+      <button class="btn ghost-ink copy-mail" type="button" data-email="hhiseog2@gmail.com" aria-label="Copy email address">Copy</button>
+    </div>
+    <p class="copy-status" role="status"></p>
   </section>
 </main>
 
@@ -115,7 +107,6 @@
     <p>So What</p>
     <ul>
       <li><a href="#work">Work</a></li>
-      <li><a href="#archive">Archive</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
     <p><a href="#main">Back to top</a></p>
@@ -206,6 +197,31 @@
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(fit);
     if ('ResizeObserver' in window) new ResizeObserver(fit).observe(document.body); else window.addEventListener('resize', fit);
   }
+
+  // Copy the email address. Shows "Copied" only when the copy really worked; otherwise selects the address and says how to copy it.
+  var cb = document.querySelector('.copy-mail'), cs = document.querySelector('.copy-status'), addr = document.querySelector('.mail-addr'), copyTimer = 0;
+  function copied(ok){
+    clearTimeout(copyTimer);
+    if (ok) {
+      cb.textContent = 'Copied'; cb.setAttribute('aria-label', 'Email address copied');
+      cs.textContent = 'Email address copied.';
+      copyTimer = setTimeout(function(){ cb.textContent = 'Copy'; cb.setAttribute('aria-label', 'Copy email address'); cs.textContent = ''; }, 2000);
+    } else {
+      var sel = window.getSelection(); sel.removeAllRanges(); var r = document.createRange(); r.selectNodeContents(addr); sel.addRange(r);
+      cs.textContent = 'Could not copy automatically. The address ' + cb.dataset.email + ' is selected: press Ctrl+C (⌘C on Mac), or copy it from here.';
+    }
+  }
+  function legacyCopy(text){
+    var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta); cb.focus(); return ok;
+  }
+  if (cb) cb.addEventListener('click', function(){
+    var text = cb.dataset.email;
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function(){ copied(true); }, function(){ copied(legacyCopy(text)); });
+    else copied(legacyCopy(text));
+  });
 
   // Menu: close after picking a link or pressing Escape
   var menu = document.querySelector('.menu');
