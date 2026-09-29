@@ -1,0 +1,46 @@
+/* site-style 2.0.0 가 만든 디자인 값 — default
+   이 파일은 업데이트 때 새로 덮어써요. 바꾸고 싶은 값은 style.css 에서 다시 정해 주세요. */
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #f7f7f7;
+  --color-text: #1d1d1f;
+  --color-muted: #6d6d6e;
+  --color-line: #dfdfe0;
+  --color-accent: #1d1d1f;
+  --color-accent-text: #1d1d1f;
+  --color-on-accent: #ffffff;
+  --color-button: #1d1d1f;
+  --color-on-button: #ffffff;
+  --color-button-border: #1d1d1f;
+  --color-error: #b3261e;
+  --color-sale: var(--color-error); /* 예전 이름(판매 기능이 있는 프로젝트의 style.css 호환) */
+  --font-heading: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --size-small: 13px;
+  --size-body: 15px;
+  --size-h3: 20px;
+  --size-h2: 28px;
+  --size-display: 45px;
+  --size-display-fluid: clamp(28px, 5vw, 45px);
+  --line-body: 1.7;
+  --line-heading: 1.25;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 48px;
+  --space-6: 64px;
+  --space-7: 96px;
+  --space-8: 128px;
+  --space-section: 96px;
+  --container: 1200px;
+  --gutter: 16px;
+  --radius: 0px;
+  --shadow: none;
+  --button-height: 48px;
+  --button-radius: 0px;
+  --button-case: none;
+  --grid-pc: 4;
+  --grid-mobile: 2;
+  --image-aspect: 3 / 4;
+}

@@ -1,0 +1,188 @@
+/* 이 사이트의 모양. site-style-tokens.css 의 값(var(--...))을 써요. site-style 은 이 파일을 건드리지 않아요.
+   가이드와 다른 값(사용자 요청)은 design_target.md '가이드와 다른 점'에 적었어요.
+   무드(rq-20260928-38964c4e): reference/ 의 재즈 인쇄물 — 밤의 먹 바탕, 크림 종이, 포스터 파랑 한 색, 큰 대문자 제목. */
+@font-face{font-family:"So What Franklin";src:url("fonts/OPTIFranklinGothic-Medium.otf") format("opentype");font-weight:400;font-style:normal;font-display:swap}
+
+:root{
+  /* 사용자 요청: reference 폴더의 Franklin Gothic Medium, 모든 글자 영어 */
+  --font-heading:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
+  --font-body:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
+  /* 사용자 선택: 인쇄색 = 포스터 파랑, 바탕 = 밤(먹 바탕 + 크림 글자) */
+  --ink:#1d1d1f;               /* 먹: 바탕·만화 선 */
+  --paper:#efe6d0;             /* 크림 종이: 글자·만화 종이 (먹 위 13.5:1) */
+  --paper-muted:#b9b09c;       /* 흐린 크림: 보조 글자 (먹 위 7.8:1) */
+  --blue:#3d8fe0;              /* 포스터 파랑: 강조 (먹 위 4.97:1, 파랑 위 먹 글자 4.97:1) */
+  --color-bg:var(--ink);
+  --color-surface:var(--ink);
+  --color-text:var(--paper);
+  --color-muted:var(--paper-muted);
+  --color-line:rgba(239,230,208,.28);
+  --color-accent:var(--blue);
+  --color-accent-text:var(--blue);
+  --color-button:var(--blue);
+  --color-on-button:var(--ink);
+  --color-button-border:var(--blue);
+  --ink-line:3px;              /* 만화 칸 먹선 */
+  --marquee-height:48px;
+  --size-mega:clamp(45px, 8vw, 128px);          /* 포스터식 큰 제목 */
+  --size-poster:clamp(80px, 25vw, 320px);       /* 섹션 제목: 폭을 채우는 대문자 */
+  /* 인쇄 질감: 아주 약한 종이 결(모든 브라우저에서 같은 SVG 노이즈) */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--ink)}
+body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-spacing:.14em;letter-spacing:.01em}  /* this Franklin cut has a narrow space; open it up for lower-case sentences */
+a{color:inherit;text-underline-offset:3px}
+ul,ol{list-style:none;margin:0;padding:0}
+h1,h2,p{margin:0}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:absolute;left:var(--gutter);top:-80px;background:var(--blue);color:var(--ink);padding:12px 16px;z-index:20;text-transform:uppercase}
+.skip:focus{top:8px}
+.skip:focus-visible{outline-color:var(--paper)}
+
+/* 포스터 아래쪽 정보처럼: 작은 대문자를 여러 칸으로 */
+.credits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-1) var(--space-3);font-size:var(--size-small);line-height:1.35;text-transform:uppercase;letter-spacing:.06em}
+.credits > *{min-width:0}
+.credits a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid currentColor;align-self:start}
+@media (max-width:600px){.credits{grid-template-columns:1fr 1fr}.credits > :first-child{grid-column:1/-1}}
+
+/* 1. 위에 흐르는 띠 — 파랑 인쇄 위 먹 글자 */
+.marquee{position:relative;display:flex;align-items:center;height:var(--marquee-height);background:var(--blue);color:var(--ink);overflow:hidden;
+  text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small)}
+.marquee-track{display:flex;flex:none;white-space:nowrap;animation:marquee var(--marquee-duration,40s) linear infinite;will-change:transform}
+.marquee-track span{flex:none}
+.marquee-track span{padding-right:.5em}
+.marquee[data-state="paused"] .marquee-track{animation-play-state:paused}
+.marquee-toggle{display:flex;align-items:center;width:100%;height:100%;padding:0;margin:0;border:0;background:none;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;overflow:hidden}
+.marquee-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:-5px}
+@keyframes marquee{to{transform:translateX(-50%)}}
+
+/* 2. 첫 화면 위에 겹친 메뉴 — 메뉴 왼쪽 · 로고 가운데 · 링크 오른쪽 */
+header.site{position:relative;z-index:5;height:64px;background:var(--ink);color:var(--paper);border-bottom:1px solid var(--color-line)}
+header.site > *{position:absolute;top:var(--space-1);display:inline-flex;align-items:center;min-height:48px;color:var(--paper);text-decoration:none;text-transform:uppercase;letter-spacing:.06em}
+header.site .menu{left:var(--gutter)}
+header.site .logo{left:50%;transform:translateX(-50%);font-size:var(--size-h3);letter-spacing:.08em}
+header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center;font-size:var(--size-small)}
+.menu summary{list-style:none;display:inline-flex;align-items:center;gap:var(--space-1);min-height:48px;min-width:48px;cursor:pointer;font-size:var(--size-small)}
+.menu summary::-webkit-details-marker{display:none}
+.menu .bars,.menu .bars::before,.menu .bars::after{display:block;width:24px;height:2px;background:currentColor}
+.menu .bars{position:relative}
+.menu .bars::before,.menu .bars::after{content:"";position:absolute;left:0}
+.menu .bars::before{top:-7px}.menu .bars::after{top:7px}
+.menu[open] .bars{background:transparent}
+.menu[open] .bars::before{top:0;transform:rotate(45deg)}
+.menu[open] .bars::after{top:0;transform:rotate(-45deg)}
+.menu nav{position:absolute;left:0;top:100%;min-width:220px;background:var(--paper);color:var(--ink);border:var(--ink-line) solid var(--ink)}
+.menu nav a{display:flex;align-items:center;min-height:48px;padding:0 var(--space-2);text-decoration:none;font-size:var(--size-body)}
+.menu nav a:hover{background:var(--blue);color:var(--ink)}
+.menu nav a:focus-visible{outline-color:var(--ink);outline-offset:-4px}
+
+/* 3. 첫 화면: 16:9 필름 영상 자리 — 비어 있는 동안은 포스터의 선 스크린만 아주 약하게 */
+/* the film's title card fills its whole 16:9 frame down to the credit line, so See the work sits in an ink strip under the film (padding) instead of over the text */
+.hero{position:relative;display:grid;place-items:center;box-sizing:content-box;width:100%;aspect-ratio:16/9;padding-bottom:var(--space-6);background:var(--ink);color:var(--paper);overflow:hidden}
+.hero-media,.hero-video,.hero-seam,.hero-tint{position:absolute;inset:0 0 var(--space-6);width:100%;height:auto;object-fit:cover}
+.hero-video,.hero-seam{pointer-events:none}                      /* no browser menu or double-tap fullscreen on the film */
+.hero-seam{opacity:0;transition:opacity 42ms linear}            /* first frame: loop seam, loading cover, poster when blocked (index.html) */
+.hero-video::-webkit-media-controls,.hero-video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
+.hero-media{background:repeating-radial-gradient(circle at 50% 58%,rgba(61,143,224,.16) 0 1px,transparent 1px 7px)}
+.hero-media::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.18;mix-blend-mode:overlay}
+/* the film: warm colours removed, deep blacks, soft highlights, a faint cool blue in the greys, fine grain */
+.hero-video,.hero-seam{filter:grayscale(1) contrast(1.22) brightness(.9)}
+.hero-tint{background:var(--blue);mix-blend-mode:color;opacity:.22;pointer-events:none}
+.hero-tint::after{content:"";position:absolute;inset:0;background:var(--grain);background-size:160px 160px;opacity:.28;mix-blend-mode:overlay}
+.hero-cue{position:absolute;left:50%;bottom:var(--space-1);transform:translateX(-50%);display:inline-flex;align-items:center;min-height:44px;padding:0 var(--space-2);
+  text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small);text-decoration:none;border-bottom:1px solid currentColor;background:rgba(29,29,31,.78)}
+/* no playback UI on the film (user request): the pause button shows only when reached by keyboard, like the skip link; tapping the banner also pauses */
+.video-toggle{position:absolute;top:var(--space-1);right:var(--space-1);min-height:44px;padding:0 var(--space-2);background:var(--ink);color:var(--paper);
+  border:1px solid var(--paper);font:inherit;text-transform:uppercase;font-size:var(--size-small);cursor:pointer}
+.video-toggle:not(:focus){top:-80px}                  /* parked above the banner (clipped by .hero) until focused, full 44px like .skip */
+
+/* 만화 칸 · 스크린톤: 크림 종이 위 먹선, 톤은 먹 또는 파랑 */
+.panel{position:relative;overflow:hidden;border:var(--ink-line) solid var(--ink);background-color:var(--paper);color:var(--ink);outline:1px solid var(--paper)}
+.cap{position:absolute;left:0;top:0;z-index:1;padding:4px var(--space-1);background:var(--paper);color:var(--ink);border-right:var(--ink-line) solid var(--ink);border-bottom:var(--ink-line) solid var(--ink);
+  font-size:var(--size-small);line-height:1.4;text-transform:uppercase;letter-spacing:.06em}
+/* caption at the bottom-left when the artwork has its own lettering in the top-left (Work 04) */
+.cap-bottom>.cap{top:auto;bottom:0;border-bottom:0;border-top:var(--ink-line) solid var(--ink)}
+.cap.plain{position:static;padding:0 0 var(--space-1);border:0;background:none;color:var(--paper)}
+/* the user's artwork (photo/, web copies in images/) fills its panel; the tone class stays underneath while it loads */
+.panel>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tone-dots{background-image:radial-gradient(var(--ink) 1.1px,transparent 1.6px);background-size:8px 8px}
+.tone-dots-dense{background-image:radial-gradient(var(--ink) 1.4px,transparent 1.9px);background-size:6px 6px}
+.tone-blue{background-image:radial-gradient(var(--blue) 1.6px,transparent 2.1px);background-size:8px 8px}
+.tone-hatch{background-image:repeating-linear-gradient(45deg,var(--ink) 0 1px,transparent 1px 9px)}
+.tone-lines{background-image:repeating-conic-gradient(from 0deg at 50% 55%,var(--ink) 0 .6deg,transparent .6deg 5deg)}
+.tone-key{display:grid;place-items:center;background-image:radial-gradient(var(--blue) 1.2px,transparent 1.7px);background-size:10px 10px}
+
+/* 4. 작업 — 포스터처럼: 작은 정보 줄 위, 폭을 채우는 큰 제목 */
+.work{padding:var(--space-1)}
+.poster-head{max-width:var(--container);margin:0 auto;padding:var(--space-7) var(--gutter) 0}
+.poster-head .credits{color:var(--paper-muted);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-line)}
+.work-title{font-size:var(--size-poster);line-height:.82;font-weight:400;text-transform:uppercase;letter-spacing:-.01em;color:var(--paper);margin-left:-.04em}
+html:not(.book-ready) .poster-head{padding-bottom:var(--space-4)}
+.panels{display:grid;grid-template-columns:1fr;gap:var(--space-1)}
+.panel.tall{aspect-ratio:4/5}
+.panel.wide{aspect-ratio:16/10}
+@media (min-width:768px){.balloon{padding:var(--space-4) var(--space-6)}.panels{grid-template-columns:1fr 1fr}.panel.wide{grid-column:1/-1}}
+.balloon{position:relative;max-width:calc(100% - var(--space-4));padding:var(--space-3) var(--space-4);background:var(--paper);color:var(--ink);border:var(--ink-line) solid var(--ink);border-radius:50%;
+  font-size:var(--size-display-fluid);line-height:1;text-transform:uppercase;letter-spacing:.04em}
+.balloon::after{content:"";position:absolute;left:28%;bottom:-28px;width:36px;height:36px;background:var(--paper);border-right:var(--ink-line) solid var(--ink);
+  border-bottom:var(--ink-line) solid var(--ink);transform:skewX(30deg) rotate(20deg)}
+
+/* 5. 큰 글자 판 — 파랑 한 색 인쇄 위 먹 글자(포스터) */
+.collage{display:grid;grid-template-columns:1fr;gap:var(--space-1);padding:0 var(--space-1)}
+.collage .panel{aspect-ratio:4/5}
+.board{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--space-5);padding:var(--space-5) var(--space-3) var(--space-3);background:var(--blue);color:var(--ink);overflow:hidden}
+.board::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.22;mix-blend-mode:multiply;pointer-events:none}
+.board > *{position:relative;z-index:1}
+.mega{font-size:clamp(64px, 14vw, 216px);line-height:.86;text-transform:uppercase;font-weight:400;letter-spacing:-.01em}
+.board .credits{border-top:2px solid var(--ink);padding-top:var(--space-1)}
+.fit{display:inline-block;white-space:nowrap;align-self:flex-start;max-width:none}
+@media (min-width:768px){.mega.fit br{display:none}}
+.board a:focus-visible,.board .btn:focus-visible{outline-color:var(--ink)}
+@media (min-width:768px){.collage{grid-template-columns:1fr 1fr}.board{aspect-ratio:4/5}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--button-height);padding:0 var(--space-4);background:var(--blue);color:var(--ink);
+  border:2px solid var(--blue);border-radius:var(--button-radius);text-transform:uppercase;letter-spacing:.06em;text-decoration:none;font:inherit;cursor:pointer}
+.btn.mail{text-transform:none;letter-spacing:.02em}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink);align-self:flex-start}
+.btn:hover{background:var(--paper);border-color:var(--paper)}
+.btn.ghost:hover{background:var(--ink);color:var(--blue);border-color:var(--ink)}
+
+/* 6. 4열 줄 */
+.archive{padding:var(--space-7) var(--space-1) 0}
+.row{display:grid;grid-template-columns:repeat(var(--grid-mobile),minmax(0,1fr));gap:var(--space-4) var(--space-1)}
+@media (min-width:900px){.row{grid-template-columns:repeat(var(--grid-pc),minmax(0,1fr))}}
+.frame{aspect-ratio:1/1;border:var(--ink-line) solid var(--ink);background-color:var(--paper);outline:1px solid var(--paper)}
+
+/* 7. 연락 · 아래 링크 줄 */
+.contact{max-width:var(--container);margin:0 auto;padding:var(--space-section) var(--gutter)}
+.contact h2{font-size:var(--size-mega);line-height:.86;text-transform:uppercase;letter-spacing:-.01em;font-weight:400;margin:0 0 var(--space-3) -.04em}
+.contact p{color:var(--paper-muted);margin-bottom:var(--space-4);max-width:32em}
+footer.site{border-top:1px solid var(--color-line);padding:var(--space-3) var(--gutter);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
+footer.site .credits{max-width:var(--container);margin:0 auto}
+footer.site ul{display:flex;flex-wrap:wrap;gap:0 var(--space-3)}
+footer.site a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;text-decoration:none}
+footer.site a:hover{color:var(--blue);text-decoration:underline}
+footer.site p{color:var(--paper-muted)}
+
+/* 3D 만화책 (book.js 가 준비되면 html.book-ready) */
+.book{padding:0 0 var(--space-5)}
+/* the canvas keeps room above the book for a page standing up; that room slides up behind the title */
+.book-stage{position:relative;max-width:var(--container);margin:calc(var(--space-3) - var(--book-head,0px)) auto 0;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.book-stage:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
+.book-stage canvas{display:block}
+.book-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-2);max-width:var(--container);margin:var(--space-3) auto 0;padding:var(--space-2) var(--gutter) 0;border-top:1px solid var(--color-line)}
+.book-info{text-align:center}
+.book-status{text-transform:uppercase;letter-spacing:.06em}
+.book-hint{color:var(--paper-muted);font-size:var(--size-small)}
+.btn.ghost-ink{background:transparent;color:var(--paper);border:2px solid var(--paper);padding:0 var(--space-3)}
+.btn.ghost-ink:hover{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.btn[disabled],.btn[disabled]:hover{background:transparent;color:var(--paper-muted);border-color:var(--paper-muted);border-style:dashed;cursor:not-allowed}
+@media (max-width:600px){.book-bar{grid-template-columns:1fr 1fr}.book-info{grid-column:1/-1;grid-row:1}.btn.ghost-ink{padding:0 var(--space-1);white-space:nowrap}}
+html.book-ready .work .panels,html.book-ready .collage>.panel,html.book-ready #archive{display:none}
+html.book-ready .collage{grid-template-columns:1fr;padding:0}
+html.book-ready .board{aspect-ratio:auto;min-height:clamp(360px,42vw,520px);padding-left:max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter)));padding-right:max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter)))}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
