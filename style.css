@@ -80,7 +80,6 @@ header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center
 .menu[open] .bars::after{top:0;transform:rotate(-45deg)}
 .menu nav{position:absolute;left:0;top:100%;min-width:220px;background:var(--paper);color:var(--ink);border:var(--ink-line) solid var(--ink)}
 .menu nav a{display:flex;align-items:center;min-height:48px;padding:0 var(--space-2);text-decoration:none;font-size:var(--size-body)}
-.menu nav a:hover{background:var(--blue);color:var(--ink)}
 .menu nav a:focus-visible{outline-color:var(--ink);outline-offset:-4px}
 
 /* 3. 첫 화면: 16:9 필름 영상 자리 — 비어 있는 동안은 포스터의 선 스크린만 아주 약하게 */
@@ -149,8 +148,6 @@ html:not(.book-ready) .poster-head{padding-bottom:var(--space-4)}
 .mail-row .btn.ghost-ink{min-width:112px}
 .copy-status{margin-top:var(--space-1);min-height:1.5em;color:var(--paper);max-width:40em}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink);align-self:flex-start}
-.btn:hover{background:var(--paper);border-color:var(--paper)}
-.btn.ghost:hover{background:var(--ink);color:var(--blue);border-color:var(--ink)}
 
 /* 7. 연락 · 아래 링크 줄 */
 .contact{max-width:var(--container);margin:0 auto;padding:var(--space-section) var(--gutter)}
@@ -160,7 +157,6 @@ footer.site{border-top:1px solid var(--color-line);padding:var(--space-3) var(--
 footer.site .credits{max-width:var(--container);margin:0 auto}
 footer.site ul{display:flex;flex-wrap:wrap;gap:0 var(--space-3)}
 footer.site a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;text-decoration:none}
-footer.site a:hover{color:var(--blue);text-decoration:underline}
 footer.site p{color:var(--paper-muted)}
 
 /* 3D 만화책 (book.js 가 준비되면 html.book-ready) */
@@ -176,16 +172,35 @@ footer.site p{color:var(--paper-muted)}
 .book-toc{grid-column:1/-1}
 .book-toc ol{max-width:640px;margin:0 auto;border-top:1px solid var(--color-line)}
 .book-toc a{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:var(--space-1);min-height:48px;padding:var(--space-1) 0;border-bottom:1px solid var(--color-line);text-decoration:none}
-.book-toc a:hover .toc-title{text-decoration:underline}
 .book-toc .toc-now{white-space:nowrap;font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
 .book-toc a[aria-current] .toc-now::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;background:currentColor}
 .book-toc .toc-page{color:var(--paper-muted);font-size:var(--size-small)}
 .book-toc a[aria-current] .toc-title{text-decoration:underline;text-decoration-thickness:2px}
 .book-hint{color:var(--paper-muted);font-size:var(--size-small)}
 .btn.ghost-ink{background:transparent;color:var(--paper);border:2px solid var(--paper);padding:0 var(--space-3)}
-.btn.ghost-ink:hover{background:var(--paper);color:var(--ink);border-color:var(--paper)}
-.btn[disabled],.btn[disabled]:hover{background:transparent;color:var(--paper-muted);border-color:var(--paper-muted);border-style:dashed;cursor:not-allowed}
+/* the book's Previous/Next at the first/last page: aria-disabled (still focusable, clicks ignored in book.js) */
+.btn[disabled],.btn[aria-disabled="true"]{background:transparent;color:var(--paper-muted);border-color:var(--paper-muted);border-style:dashed;cursor:not-allowed}
+/* Contents toggle: a small chevron (drawn with the button's own 2px border rule, current colour) points down when closed, up when open.
+   Generated content with no text, so screen readers only hear the button name and aria-expanded. */
+.book-toc-toggle::after{content:"";width:.45em;height:.45em;margin-left:var(--space-1);border:solid currentColor;border-width:0 2px 2px 0;transform:translateY(-.15em) rotate(45deg)}
+.book-toc-toggle[aria-expanded="true"]::after{transform:translateY(.15em) rotate(-135deg)}
 @media (max-width:600px){.book-bar{grid-template-columns:1fr 1fr}.book-info{grid-column:1/-1;grid-row:1}.book-bar .btn.ghost-ink{padding:0 var(--space-1);white-space:nowrap}.book-toc a{grid-template-columns:72px 1fr auto}}
 html.book-ready .work .panels{display:none}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* 상호작용 상태 — 역할별로 한 곳에 (표: design_target.md 'hover 규칙'). 모양·크기는 바뀌지 않고 색·선만 바뀌어 레이아웃이 흔들리지 않아요.
+   hover 는 마우스처럼 hover 할 수 있는 기기에서만 — 터치 뒤에 hover 모양이 선택된 것처럼 남지 않게. 누르는 동안(:active)은 모든 기기에서 같은 반응. */
+@media (hover:hover){
+  /* buttons: the fill inverts on its own surface */
+  .btn:not([disabled]):not([aria-disabled="true"]):hover{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+  .btn.ghost:not([disabled]):not([aria-disabled="true"]):hover{background:var(--ink);color:var(--blue);border-color:var(--ink)}
+  /* menu items: the row takes the poster blue */
+  .menu nav a:hover{background:var(--blue);color:var(--ink)}
+  /* text links: underline (links that already carry a rule get a heavier rule instead) */
+  header.site .logo:hover,header.site .head-link:hover,footer.site a:hover,.book-toc a:hover .toc-title{text-decoration:underline}
+  .credits a:hover,.hero-cue:hover{box-shadow:inset 0 -1px 0 currentColor}
+}
+.btn:not([disabled]):not([aria-disabled="true"]):active{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+.btn.ghost:not([disabled]):not([aria-disabled="true"]):active{background:var(--ink);color:var(--blue);border-color:var(--ink)}
+.menu nav a:active{background:var(--blue);color:var(--ink)}

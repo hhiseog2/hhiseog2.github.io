@@ -627,12 +627,18 @@ async function init() {
     else text = `Pages ${vis[0] + 1} and ${vis[1] + 1} of ${total}: ${pages[vis[0]].label} / ${pages[vis[1]].label}`;
     status.textContent = text;
     book.dataset.spread = String(k);
-    prev.disabled = k === 0;
-    next.disabled = k === N;
+    // at the first/last page the button stays focusable (a real `disabled` drops keyboard focus to <body>) and only says it can't be used
+    setUsable(prev, k > 0);
+    setUsable(next, k < N);
     markContents(vis);
   }
-  prev.addEventListener('click', () => turn(-1));
-  next.addEventListener('click', () => turn(1));
+  function setUsable(btn, usable) {
+    if (usable) btn.removeAttribute('aria-disabled'); else btn.setAttribute('aria-disabled', 'true');
+  }
+  // click, Enter and Space all arrive as 'click' on a <button>: nothing happens while it is marked unusable
+  const usable = (btn) => btn.getAttribute('aria-disabled') !== 'true';
+  prev.addEventListener('click', () => { if (usable(prev)) turn(-1); });
+  next.addEventListener('click', () => { if (usable(next)) turn(1); });
   stage.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') { e.preventDefault(); turn(1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); turn(-1); }
