@@ -8,7 +8,7 @@ export function mountCueDebugger(section, api) {
   panel.setAttribute('role', 'group');
   panel.setAttribute('aria-label', 'Cue debugger');
   panel.innerHTML = '<p class="cue-time" aria-live="off"></p><div class="cue-line" tabindex="0" aria-label="Film timeline, press to seek"><span class="cue-head"></span></div>' +
-    '<p class="cue-help">O sets OUT, B sets BACK, [ and ] step a frame, C copies the cues.</p><p class="cue-note" role="status"></p>';
+    '<p class="cue-help">O sets exitAt, B sets returnAt, [ and ] step a frame, C copies the cues.</p><p class="cue-note" role="status"></p>';
   section.querySelector('.screening-controls').after(panel);
   const time = panel.querySelector('.cue-time'), line = panel.querySelector('.cue-line'), head = panel.querySelector('.cue-head'), note = panel.querySelector('.cue-note');
   const marks = {};
@@ -21,10 +21,10 @@ export function mountCueDebugger(section, api) {
   }
   function draw() {
     const clip = api.clip(), media = api.media(), d = media.duration || 15, t = media.currentTime || 0;
-    time.textContent = 't = ' + t.toFixed(2) + ' s   out ' + clip.out.toFixed(2) + '   back ' + clip.back.toFixed(2) + '   ' + api.phase();
+    time.textContent = 't = ' + t.toFixed(3) + ' s   exitAt ' + clip.exitAt.toFixed(3) + '   returnAt ' + clip.returnAt.toFixed(3) + '   ' + api.phase();
     head.style.left = (100 * t / d) + '%';
-    marks.out.style.left = (100 * clip.out / d) + '%';
-    marks.back.style.left = (100 * clip.back / d) + '%';
+    marks.out.style.left = (100 * clip.exitAt / d) + '%';
+    marks.back.style.left = (100 * clip.returnAt / d) + '%';
     requestAnimationFrame(draw);
   }
   requestAnimationFrame(draw);
@@ -35,11 +35,11 @@ export function mountCueDebugger(section, api) {
   document.addEventListener('keydown', (e) => {
     if (e.target.closest && e.target.closest('input,textarea')) return;
     const clip = api.clip(), media = api.media(), k = e.key.toLowerCase();
-    if (k === 'o') { clip.out = +media.currentTime.toFixed(2); note.textContent = 'OUT set to ' + clip.out; api.changed(); }
-    else if (k === 'b') { clip.back = +media.currentTime.toFixed(2); note.textContent = 'BACK set to ' + clip.back; api.changed(); }
-    else if (k === '[' || k === ']') { api.seek(media.currentTime + (k === ']' ? 1 : -1) / 30); }
+    if (k === 'o') { clip.exitAt = +media.currentTime.toFixed(3); note.textContent = 'exitAt set to ' + clip.exitAt; api.changed(); }
+    else if (k === 'b') { clip.returnAt = +media.currentTime.toFixed(3); note.textContent = 'returnAt set to ' + clip.returnAt; api.changed(); }
+    else if (k === '[' || k === ']') { api.seek(media.currentTime + (k === ']' ? 1 : -1) / 24); }
     else if (k === 'c') {
-      const json = JSON.stringify({ src: clip.src, member: clip.member, out: clip.out, back: clip.back, screenPos: clip.screenPos, screenScale: clip.screenScale });
+      const json = JSON.stringify({ exitAt: clip.exitAt, exitX: clip.exitX, exitScale: clip.exitScale, returnAt: clip.returnAt, returnX: clip.returnX, landAt: clip.landAt });
       const done = () => { note.textContent = 'Cues copied: ' + json; };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(json).then(done, () => { note.textContent = json; });
       else note.textContent = json;

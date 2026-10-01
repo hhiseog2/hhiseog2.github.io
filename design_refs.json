@@ -1,14 +1,14 @@
 [
   {
-    "component": "Reduced motion and pause for the first-screen hologram scene (src/hologram/scene.js)",
+    "component": "Reduced motion for the first-screen screening room (src/screening/sequence.js, filmShader.js, curtain.js)",
     "pattern_ids": ["apple-reduce-motion-01", "discord-motion-contrast-settings-01", "apple-motion-optional-01"],
-    "reason": "With reduced motion there is no carousel, parallax, dolly or glitch: one frame with the saxophonist at the front. It follows the setting if it changes during the visit. The looping motion can be stopped by pressing the first screen or with a button reachable by keyboard, and nothing is drawn off screen or in a hidden tab. Motion is decoration, so the title and links are all there without it.",
-    "requirement_ids": ["R5"]
+    "reason": "With reduced motion the film stays black and white with still grain, but there is no flicker, gate weave, 12 fps stutter, frame slip or 3D pop-out, and the curtain fades in 0.6 s instead of sweeping. It follows the setting if it changes during the visit. Nothing is drawn off screen or in a hidden tab.",
+    "requirement_ids": ["R4", "R7"]
   },
   {
-    "component": "First-screen states (still picture, primitive fallback, pause button)",
+    "component": "Screening room states and controls (projector button, Pause, Mute, status line)",
     "pattern_ids": ["apple-feedback-status-01", "apple-color-not-alone-01"],
-    "reason": "While loading and without WebGL, a still picture of the same scene shows (no loading animation). If a model file fails, only that player falls back to primitives. The pause state is told by the button text (Pause/Play animation) and aria-pressed, never by colour alone.",
-    "requirement_ids": ["R5", "R1"]
+    "reason": "The projector itself is the button; its name follows the show (Play / Pause / Resume the screening) and the status line says each step in words, including when a press is ignored. Pause and Mute show their state with aria-pressed and a square mark, never by colour alone. Without WebGL the film plays in a plain video with a visible button.",
+    "requirement_ids": ["R2", "R3"]
   }
 ]

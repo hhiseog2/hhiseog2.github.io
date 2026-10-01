@@ -12,11 +12,12 @@ export async function loadProjector(loader) {
   const need = (name) => { const o = root.getObjectByName(name); if (!o) throw new Error('projector.glb has no "' + name + '"'); return o; };
   const reels = [need('reel_front'), need('reel_rear')];
   const glass = need('lens_glass'), beamOrigin = need('beam_origin');
+  const brass = [];
   root.traverse((o) => {
     if (!o.isMesh) return;
     const m = o.material;
     if (m.name === 'painted_metal') m.color.set(CONFIG.palette.paint);
-    if (m.name === 'brass') m.color.set(CONFIG.palette.metal);
+    if (m.name === 'brass') { m.color.set(CONFIG.palette.metal); m.emissive = new THREE.Color(CONFIG.palette.paper); m.emissiveIntensity = 0; brass.push(m); }
     if (m.aoMap) m.aoMapIntensity = 1.0;
   });
   const glassMesh = glass.isMesh ? glass : glass.children.find((c) => c.isMesh);
@@ -30,12 +31,15 @@ export async function loadProjector(loader) {
     root,
     hit: root,                         // what a click on the canvas is tested against
     lens(target = tmp) { return beamOrigin.getWorldPosition(target); },
-    /** dt: seconds since the last frame, speed: 0..1 reel speed, lamp: 0..1 lamp brightness */
-    update(dt, speed, lamp) {
+    /** dt: seconds since the last frame, speed: 0..1 reel speed, lamp: 0..1 lamp brightness,
+     *  fx: { hover: 0..1 (brass highlight), twitch: 0..1 (the reels' idle nudge) } */
+    update(dt, speed, lamp, fx = {}) {
       reelAngle += dt * speed * 9.0;
-      reels[0].rotation.z = -reelAngle;
-      reels[1].rotation.z = -reelAngle * 1.5;
+      const twitch = (fx.twitch || 0) * 0.12;
+      reels[0].rotation.z = -reelAngle - twitch;
+      reels[1].rotation.z = -reelAngle * 1.5 - twitch * 0.7;
       lens.color.copy(dark).lerp(warm, lamp).multiplyScalar(1 + lamp);
+      for (const m of brass) m.emissiveIntensity = 0.22 * (fx.hover || 0);
     },
     dispose() {
       root.traverse((o) => {

@@ -39,22 +39,27 @@
    "nodes": 30
   },
   "frontman": {
-   "triangles": 12740,
-   "bytes": 207140,
+   "triangles": 13544,
+   "bytes": 218568,
    "materials": [
-    "toon_white",
-    "toon_grey",
-    "toon_black"
+    "toon_skin",
+    "toon_cap",
+    "toon_shirt",
+    "toon_suit",
+    "toon_vest",
+    "toon_ink",
+    "toon_shoe",
+    "toon_mic"
    ],
    "animations": [
-    "emerge 1.000s",
-    "return 1.000s",
+    "exit_leap 0.600s",
+    "return_dive 1.100s",
     "solo 3.000s"
    ],
    "extensions": [
     "KHR_draco_mesh_compression"
    ],
-   "nodes": 29
+   "nodes": 31
   }
  }
 }

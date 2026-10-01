@@ -1,61 +1,74 @@
-// The screening room (#screening): every number the section shares. The site has no bundler, so file URLs are resolved from here.
+// The screening room (first screen): every number the section shares. The site has no bundler, so file URLs are resolved here.
+// Second version (screening-v2-prompt.md): no seats, a big screen, a red velvet curtain, the projector itself is the button,
+// the film runs through a black-and-white projection shader, and the frontman leaves and comes back through the top edge.
 //
-// Cue data (one entry per film clip). When a real clip arrives or a clip is re-cut, only these numbers change:
-//   out          the moment the 2D player has sprung and is about to leave the picture (seconds into the clip)
-//   back         the moment he starts coming back into the picture
-//   screenPos    where his feet were in the picture at `out`: x and y from the centre of the screen, -0.5 .. 0.5 (y up)
-//   screenScale  his standing height as a share of the screen's height
-// The 3D player takes over at that spot and size, and is back on that spot, inside the screen, exactly at `back`.
-// Find the numbers with ?debug=cues (O / B set out / back at the current time, C copies the cues as JSON).
-//
-// The clip in use is the owner's Seedance film (media/seedance.mp4, used as is: the frontman's jump). The saxophone and bass
-// clips are left out until their films exist; their models are ready in public/models/cartoon/.
+// Cue data (popout) — measured frame by frame on the owner's film (media/seedance.mp4, 24 fps; decision frames in
+// .superloopy/evidence/screening-v2/cues/decided-*.png). Re-measure with ?debug=cues (O / B set exitAt / returnAt, C copies).
+//   exitAt     first frame with the 2D frontman gone over the top edge (only the smoke left)
+//   exitX      his feet's horizontal place in the frame before, from the screen centre (-0.5 .. 0.5)
+//   exitScale  his height as a share of the screen height, in the last frame where all of him is in the picture (3.342 s)
+//   returnAt   first frame with his feet showing at the top edge
+//   returnX    those feet's horizontal place
+//   landAt     the frame his feet touch the stage
 
 const site = (path) => new URL('../../' + path, import.meta.url).href;
 
 export const SCREENING = {
-  sectionAfter: null,          // a selector to move the section after (null: where index.html puts it — the first screen)
-  colorReveal: false,          // true: a player who leaves the screen slowly gets his sheet colours back while he is out
-  bpm: 160,
-  clips: [
-    { src: 'media/seedance', formats: ['mp4'], member: 'frontman', out: 3.33, back: 10.35, screenPos: [0.0, -0.355], screenScale: 0.70 },
-  ],
+  stage: {
+    seats: false,
+    // the clip is 4:3: on a 16:9 desktop canvas 72% would leave no room above the screen or for the projector, so the owner chose
+    // about half the width there (2026-10-01). Phones keep the brief's 88%.
+    screenWidthOfCanvas: { mobile: 0.88, desktop: 0.50 },
+    headroomAbove: 0.16,
+    canvasAspect: { mobile: [4, 5], desktop: [16, 9] },
+    mobileBreakpoint: 768,
+  },
+  curtain: { initial: 'closed', openSec: 2.0, closeSec: 2.6, fadeSec: 0.6, color: '#6B0C12', sheen: '#c4323c', fringe: '#a8843a' },
+  film: {
+    fps: 12, grainFps: 24,
+    holdEvery: [3, 6], holdFrames: [2, 4],
+    weave: [0.0025, 0.004], slipEvery: [9, 14], slipGuardSec: 1.0, slipFrames: 6,
+    flicker: [0.94, 1.04], blacks: 0.04, whites: 0.92,
+    scratches: [0, 2], dustPerFrame: [0, 4], cueMarks: [7, 1],
+    holdMaxWidth: { desktop: 1280, mobile: 1080 },
+  },
+  audio: { vintage: true },
+  clip: { src: 'media/seedance', formats: ['mp4'], aspect: 1112 / 834 },
+  popout: {
+    member: 'frontman',
+    exitAt: 3.717, exitX: -0.04, exitScale: 0.73,
+    returnAt: 10.333, returnX: -0.06, landAt: 10.459,
+    hover: { heightOfScreen: 0.65, depthBetween: 0.5, maxCanvasHeight: 0.4 },
+    filmness: { atScreen: 1.0, inAir: 0.25 },
+    // greys after the black-and-white pass, matched to the 2D frontman (material name -> grey)
+    greys: { toon_cap: 0.9, toon_shirt: 0.9, toon_suit: 0.72, toon_vest: 0.6, toon_ink: 0.08, toon_skin: 0.78, toon_shoe: 0.3, toon_mic: 0.82 },
+  },
 };
 
 export const CONFIG = {
-  models: {
-    projector: site('public/models/projector.glb'),
-    sax: site('public/models/cartoon/sax.glb'),
-    bass: site('public/models/cartoon/bass.glb'),
-    frontman: site('public/models/cartoon/frontman.glb'),
-  },
+  models: { projector: site('public/models/projector.glb'), frontman: site('public/models/cartoon/frontman.glb') },
   draco: site('public/draco/'),
-  media: (clip, format) => site(clip.src + '.' + format),
+  media: (format) => site(SCREENING.clip.src + '.' + format),
   // sequence (seconds)
-  lamp: 0.3,                   // the lamp flickers on
-  reelSpinUp: 1.2,             // the reels come up to speed
-  beamRise: 2.0,               // the beam and the screen brighten
-  countdown: 3.0,              // 3, 2, 1 leader
-  fadeOut: 1.6,                // after the film, the beam dies away
-  // pop-out (seconds; the actions in the models are 1.0 / 3.0 / 1.0)
-  emergeFrom: 0.25,            // the emerge action is entered here: the 2D player has already crouched in the film
-  emergeFly: 0.8,              // from the screen to the place in the air
-  returnFly: 1.0,              // from the air back onto the screen, ends exactly at `back`
-  blend: 0.15,                 // cross-fade between actions
-  ripple: 0.9,                 // rings on the screen where he went back in
-  // room (metres)
-  screen: { width: 4.0, height: 3.0, centre: [0, 2.15, -6.0] },
-  projectorAt: [0, 0.75, 1.9],
-  projectorSize: 1.6,
-  air: [0.0, 1.05, 0.0],       // where the player hangs (his feet) while he plays his solo: over the seats, in the beam, in front of the projector's light
-  airScale: 0.6,               // his size there, as a share of his size on the screen (he is much nearer, so he still looks bigger)
-  palette: {
-    ink: '#1d1d1f', paper: '#efe6d0', grey: '#8a857a', wall: '#141416', floor: '#1a1a1c', seat: '#151517', screenOff: '#2b2b2d',
-    beam: '#efe6d0', metal: '#cfc6b0', paint: '#2b2b2e',   // beam = the site's paper; metal and paint as the first screen's site theme
-    tiers: { toon_white: '#efe6d0', toon_grey: '#8f897d', toon_black: '#1d1d1f' },
-  },
-  performance: { maxDpr: 2, mobileBreakpoint: 768, dust: 420 },
+  lamp: 0.3, reelSpinUp: 1.2, countdown: 3.0, runout: 1.0, beamOff: 1.2, closeAfterRunout: 0.6, breatheEvery: 4.0,
+  // pop-out (seconds; the actions in the model are 0.6 / 3.0 / 1.1)
+  exitLeap: 0.6, toHover: 0.7, returnDive: 1.1, visibleAfterReturn: 0.15, puff: 0.6, ripple: 0.9,
+  // room (metres). The screen is 4 m wide at the clip's shape, its plane is z = 0, the floor y = 0.
+  screen: { width: 4.0, bottom: 1.0 },
+  projectorSize: 1.4,
+  palette: { ink: '#1d1d1f', paper: '#efe6d0', wall: '#0c0c0d', floor: '#141415', frame: '#0a0a0b', screenOff: '#2b2b2d', metal: '#cfc6b0', paint: '#2b2b2e' },
+  performance: { maxDpr: 2, dust: 420, outlinePx: [1.5, 2.5], shadowMap: { desktop: 1024, mobile: 512 }, curtainSeg: { desktop: [96, 48], mobile: [64, 32] } },
 };
 
-export const LABEL = 'An old cinema. A film projector faces the screen; press it to roll a black-and-white cartoon of a jazz trio, ' +
-  'in which the singer jumps out of the screen, sings in the air above the seats and dives back in.';
+export const STATUS = {
+  idle: 'Press the projector to start the show.',
+  opening: 'The curtain is opening.',
+  countdown: 'Starting in three, two, one.',
+  playing: 'Now playing.',
+  paused: 'Paused.',
+  ending: 'The show is ending.',
+  over: 'The show is over. Press the projector to roll it again.',
+  waitStart: 'Please wait, the show is about to start.',
+  waitEnd: 'Please wait, the curtain is closing.',
+  blocked: 'Your browser held back the sound. Press Mute to turn it on.',
+};

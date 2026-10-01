@@ -44,6 +44,25 @@ def fit_budget(objects):
     return tris
 
 
+def rename_materials(mapping):
+    """paint_* -> toon_*; paints that map to the same toon name end up as one material"""
+    target = {}
+    for m in list(bpy.data.materials):
+        if m.name in mapping:
+            want = mapping[m.name]
+            if want in target:
+                continue
+            m.name = want
+            target[want] = m
+    for o in bpy.data.objects:
+        if o.type != "MESH":
+            continue
+        for slot in o.material_slots:
+            m = slot.material
+            if m is not None and m.name in mapping and mapping[m.name] in target:
+                slot.material = target[mapping[m.name]]
+
+
 def show_action(rig, name, frame):
     ad = rig.arm.animation_data
     ad.action = bpy.data.actions[name]
@@ -63,17 +82,21 @@ def main(only):
         rig = built["rig"]
         tris = fit_budget(built["objects"])
         center, radius = FRAMING[tag]
-        show_action(rig, "emerge", 0)
+        acts = built["actions"]                                       # [out, loop, back] in that order
+        show_action(rig, *(built.get("preview_action") or (acts[0], 0)))
         C.render_previews(tag, center, radius, VIEWS, frame=0, world=SHEET_BG)
-        show_action(rig, "solo", 17)
+        show_action(rig, acts[1], 17)
         C.render_previews(tag, (center[0], center[1], center[2] + 0.15), radius * 1.15, {"solo": VIEWS["34"]}, frame=17, world=SHEET_BG)
-        show_action(rig, "solo", 45)
+        show_action(rig, acts[1], 45)
         C.render_previews(tag, (center[0], center[1], center[2] + 0.15), radius * 1.15, {"solo4": VIEWS["front"]}, frame=45, world=SHEET_BG)
-        show_action(rig, "emerge", 11)
+        show_action(rig, acts[0], 11)
         C.render_previews(tag, center, radius * 1.15, {"emerge": VIEWS["side"]}, frame=11, world=SHEET_BG)
-        show_action(rig, "return", 24)
+        show_action(rig, acts[2], 24)
         C.render_previews(tag, (center[0], center[1], center[2] + 0.1), radius * 1.25, {"return": VIEWS["side"]}, frame=24, world=SHEET_BG)
-        C.finalize_toon([o for o in built["objects"] if o.type == "MESH"])
+        if built.get("keep_materials"):
+            rename_materials(built["keep_materials"])               # named toon_* materials; the site sets their greys
+        else:
+            C.finalize_toon([o for o in built["objects"] if o.type == "MESH"])
         C.stash_actions(rig, built["actions"])
         path = os.path.join(C.MODELS, tag + ".glb")
         size = C.export_glb(path, built["objects"], animated=True)

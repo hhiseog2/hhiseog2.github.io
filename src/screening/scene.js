@@ -1,473 +1,324 @@
-// The screening room (#screening). index.html imports this once the section comes near the viewport (or the projector is pressed
-// before that); until then the section shows a still picture of the room.
+// The screening room (first screen), second version. index.html imports this after the page has loaded (desktop) or after the
+// first input; until then the section shows a still of the room with the curtain closed.
 //
-//   off      the projector waits under a dim light, the screen is dark cloth. "Play the screening" sits on the projector.
-//   warm     press: the lamp flickers on (0.3 s), the reels come up to speed (1.2 s), the beam and the screen brighten (2 s)
-//   count    the 3, 2, 1 leader (3 s)
-//   play     the film with its sound; at the clip's cues the player jumps out of the screen and back (popout.js)
-//   cool     the film ends: the beam dies away and the room is back to `off`
-// Pressing the projector while it runs pauses or resumes, as do the Pause and Mute buttons under the screen.
+// Parts: stage.js (no seats, big screen, camera fit) · curtain.js (red velvet) · sequence.js (the show's state machine) ·
+// filmShader.js (black-and-white projection) · popout.js + toonInk.js (the 3D frontman) · projectorButton.js (the projector is
+// the button) · vintageAudio.js (sound) · projector.js (the machine, its beam, dust and noises) · countdown.js (leader, stand-in).
 //
-// Without WebGL the section falls back to the film itself in a plain <video>; with reduced motion the lamp does not flicker,
-// there is no countdown and nobody leaves the screen: the film just plays.
+// Without WebGL the section falls back to the film in a plain <video> (black and white by CSS) with a visible play button.
+// Reduced motion: black and white with still grain; no flicker, weave, stutter, slip or pop-out; the curtain fades.
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from '../../vendor/jsm/loaders/DRACOLoader.js';
 import { RoomEnvironment } from '../../vendor/jsm/environments/RoomEnvironment.js';
-import { CONFIG, SCREENING, LABEL } from './config.js';
+import { CONFIG, SCREENING, STATUS } from './config.js';
+import { createStage } from './stage.js';
+import { createCurtain } from './curtain.js';
+import { createSequence } from './sequence.js';
+import { createFilm } from './filmShader.js';
+import { createInk } from './toonInk.js';
+import { loadFrontman, placeAt, applyPlace, createPuffs } from './popout.js';
+import { createProjectorButton } from './projectorButton.js';
+import { createVintageAudio } from './vintageAudio.js';
 import { loadProjector, createBeam, createDust, createSound } from './projector.js';
 import { createLeader, createTestCard } from './countdown.js';
-import { loadPlayer, placeAt, applyPlace, toonGradient } from './popout.js';
 
-const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const params = new URLSearchParams(window.location.search);
-
-const STATUS = {
-  warm: 'The projector is warming up.',
-  count: 'Starting in three, two, one.',
-  play: 'Now playing.',
-  paused: 'Paused.',
-  ended: 'The reel has ended. Press the projector to play it again.',
-  blocked: 'Your browser held back the sound. Press Mute to turn it on.',
-};
-
-function layoutFor(aspect) {
-  // the camera sits a little behind and above the projector, looking at the screen: the screen in the upper part of the picture,
-  // the projector below it among the seats, the air between them free for the player
-  if (aspect >= 1.3) return { fov: 36, eye: [0, 2.6, 7.6], look: [0, 0.95, -6] };
-  if (aspect >= 0.95) return { fov: 40, eye: [0, 2.7, 7.8], look: [0, 1.0, -6] };
-  return { fov: 48, eye: [0, 2.8, 8.2], look: [0, 1.1, -6] };
-}
-
-function curtainTexture() {
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 8;
-  const g = c.getContext('2d');
-  for (let x = 0; x < 256; x++) {
-    const v = Math.round(34 + 22 * Math.pow(0.5 + 0.5 * Math.sin(x / 256 * Math.PI * 14), 1.6));
-    g.fillStyle = `rgb(${v},${v},${v + 1})`;
-    g.fillRect(x, 0, 1, 8);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function screenMaterial() {
-  const uniforms = {
-    uLeader: { value: null }, uFilm: { value: null }, uMode: { value: 0 }, uBright: { value: 0 }, uTime: { value: 0 },
-    uOff: { value: new THREE.Color(CONFIG.palette.screenOff) }, uRipple: { value: new THREE.Vector3(0.5, 0.5, -1) }, uFlicker: { value: 1 },
-  };
-  const material = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: /* glsl */`
-      uniform sampler2D uLeader; uniform sampler2D uFilm; uniform float uMode; uniform float uBright; uniform float uTime;
-      uniform vec3 uOff; uniform vec3 uRipple; uniform float uFlicker;
-      varying vec2 vUv;
-      void main() {
-        vec2 uv = vUv;
-        float ring = 0.0;
-        if (uRipple.z >= 0.0) {                                   // rings where the player went back into the film
-          vec2 d = (vUv - uRipple.xy) * vec2(4.0 / 3.0, 1.0);
-          float r = length(d), front = uRipple.z * 0.55;
-          float wave = sin((r - front) * 80.0) * exp(-abs(r - front) * 14.0) * (1.0 - uRipple.z);
-          uv += normalize(d + 1e-5) * wave * 0.006;
-          ring = wave * 0.22;
-        }
-        vec3 film = uMode < 0.5 ? texture2D(uLeader, uv).rgb : uMode < 1.5 ? texture2D(uFilm, uv).rgb : vec3(0.93, 0.92, 0.89);   // 2: bare light, no film yet
-        float flick = 1.0 - uFlicker * 0.05 * (0.5 + 0.5 * sin(uTime * 53.0) * sin(uTime * 17.0));
-        float vig = 1.0 - 0.28 * pow(length(vUv - 0.5) * 1.35, 2.0);
-        vec3 lit = film * flick * vig + ring;
-        gl_FragColor = vec4(mix(uOff, lit, uBright), 1.0);
-        #include <colorspace_fragment>
-      }`,
-  });
-  return { material, uniforms };
-}
-
-function grainPass() {
-  const uniforms = { uTime: { value: 0 }, uAmount: { value: 0.07 } };
-  const material = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-    fragmentShader: /* glsl */`
-      uniform float uTime; uniform float uAmount; varying vec2 vUv;
-      float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime * 61.7) * 43758.5453); }
-      void main() {
-        float n = hash(floor(gl_FragCoord.xy / 1.5)) - 0.5;
-        gl_FragColor = vec4(vec3(n > 0.0 ? 1.0 : 0.0), abs(n) * uAmount * 2.0);
-      }`,
-    transparent: true, depthTest: false, depthWrite: false,
-  });
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.frustumCulled = false;
-  const scene = new THREE.Scene();
-  scene.add(mesh);
-  return { scene, camera: new THREE.Camera(), uniforms, dispose() { geometry.dispose(); material.dispose(); } };
-}
 
 export async function activate(section) {
   if (section.__screening) return section.__screening;
   section.__screening = { pending: true };
-  // the section's place on the page comes from the config (default: right under the first screen)
-  const after = document.querySelector(SCREENING.sectionAfter);
-  if (after && after.nextElementSibling !== section) after.after(section);
-
-  const stage = section.querySelector('.screening-stage');
+  const stageEl = section.querySelector('.screening-stage');
   const button = section.querySelector('.screening-projector');
   const pauseBtn = section.querySelector('.screening-pause');
   const muteBtn = section.querySelector('.screening-mute');
   const status = section.querySelector('.screening-status');
   const video = section.querySelector('.screening-video');
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const mobile = window.matchMedia('(max-width: ' + CONFIG.performance.mobileBreakpoint + 'px)').matches;
+  const reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const reduce = () => reduceMq.matches;
+  const mobile = window.matchMedia('(max-width: ' + SCREENING.stage.mobileBreakpoint + 'px)').matches;
+  const P = SCREENING.popout;
 
-  let clipIndex = 0, filmTexture = null, plain = false;
-  const clip = () => SCREENING.clips[clipIndex];
-  // the film: the clip's video, or the drawn stand-in when it has none, cannot load, or ?fallback=1
+  // ---------- the film: the clip, or the drawn stand-in (no file, a load error, or ?fallback=1) ----------
   let media = video, card = null;
+  video.innerHTML = '';
+  for (const f of SCREENING.clip.formats) {
+    const el = document.createElement('source');
+    el.src = CONFIG.media(f); el.type = 'video/' + f;
+    video.appendChild(el);
+  }
+  const cardClip = { member: P.member, out: P.exitAt, back: P.returnAt, screenPos: [P.exitX, 0.5 - P.exitScale], screenScale: P.exitScale };
   function useCard(why) {
     if (card) return;
     console.warn('screening: stand-in film (' + why + ')');
-    card = createTestCard(clip());
+    card = createTestCard(cardClip);
     media = card;
     section.dataset.film = 'stand-in';
-    wireMedia();
+    card.addEventListener('ended', () => seq && seq.ended_());
   }
-  const sources = clip().src ? clip().formats.map((f) => ({ src: CONFIG.media(clip(), f), type: 'video/' + f })) : [];
-  video.innerHTML = '';
-  for (const s of sources) {
-    const el = document.createElement('source');
-    el.src = s.src; el.type = s.type;
-    el.addEventListener('error', () => { if (!video.currentSrc || video.networkState === 3) useCard('the film did not load'); });
-    video.appendChild(el);
-  }
+  if (params.get('fallback') === '1') useCard('?fallback=1');
+  video.addEventListener('error', () => { if (video.error) useCard('the film failed: ' + video.error.code); });
 
-  // ---------- sequence state ----------
-  let state = 'off', seqT = 0, paused = false, alive = true, ended = false;
+  // ---------- state and status ----------
+  let seq = null, alive = true, plain = false;
+  const say = (key) => { const text = STATUS[key] || ''; if (status.textContent !== text) status.textContent = text; };
+  const audio = createVintageAudio(video);
   const sound = createSound();
-  const setStatus = (key) => { status.textContent = key ? STATUS[key] : ''; };
-  function setPressed() {
-    const running = state !== 'off' && state !== 'cool' && !paused;
-    button.setAttribute('aria-pressed', running ? 'true' : 'false');
-    pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
-    pauseBtn.setAttribute('aria-disabled', state === 'off' || state === 'cool' ? 'true' : 'false');
-    muteBtn.setAttribute('aria-pressed', media.muted ? 'true' : 'false');
-    stage.dataset.state = state;
-    stage.dataset.paused = paused ? 'true' : 'false';
-  }
-  function go(next) {
-    state = next; seqT = 0;
-    if (next === 'play') {
-      media.currentTime = 0;
-      const p = media.play();
-      if (p && p.catch) p.catch((e) => {
-        if (e && e.name === 'NotAllowedError' && !media.muted) { media.muted = true; setStatus('blocked'); media.play().catch(() => {}); setPressed(); }
-      });
-    }
-    if (next === 'cool') sound.stop();
-    if (next !== 'off') setStatus(next === 'cool' ? 'ended' : next);
-    setPressed();
-    wake();
-  }
-  function prime() {
-    // inside the click: let this element play with sound later (some browsers only allow it from a gesture)
-    if (media === video && video.paused) {
-      const p = video.play();
-      if (p && p.then) p.then(() => { if (state === 'warm' || state === 'count') { video.pause(); video.currentTime = 0; } }).catch(() => {});
-    }
-  }
-  function press() {
-    sound.unlock();
-    if (state === 'off' || state === 'cool') {
-      paused = false; ended = false;
-      prime();
-      if (!plain) sound.click();
-      go(reduce.matches || plain ? 'play' : 'warm');
+  let lastState = 'IDLE', showOver = false;
+  function onState(next, err) {
+    if (next === 'play-failed') {
+      if (err && err.name === 'NotAllowedError' && !media.muted) { media.muted = true; audio.muted = true; sound.muted = true; say('blocked'); media.play().catch(() => {}); sync(); }
       return;
     }
-    setPaused(!paused);
+    if (next === 'OPENING') { say('opening'); audio.curtain(reduce() ? SCREENING.curtain.fadeSec : SCREENING.curtain.openSec, true); }
+    if (next === 'COUNTDOWN') say('countdown');
+    if (next === 'PLAYING') { say('playing'); audio.playing(true); }
+    if (next === 'RUNOUT') { say('ending'); audio.playing(false); }
+    if (next === 'CLOSING') audio.curtain(reduce() ? SCREENING.curtain.fadeSec : SCREENING.curtain.closeSec, false);
+    if (next === 'IDLE') { showOver = lastState === 'CLOSING'; say(showOver ? 'over' : 'idle'); sound.stop(); }
+    lastState = next;
+    sync();
   }
-  function setPaused(p) {
-    if (state === 'off' || state === 'cool') return;
-    paused = p;
-    if (state === 'play') { if (paused) media.pause(); else media.play().catch(() => {}); }
-    if (paused) sound.stop();
-    setStatus(paused ? 'paused' : state);
-    setPressed();
+  function sync() {
+    if (!seq) return;
+    const st = seq.state, busy = st === 'OPENING' || st === 'COUNTDOWN' || st === 'RUNOUT' || st === 'CLOSING';
+    if (btn) btn.label(st, seq.paused);
+    pauseBtn.setAttribute('aria-pressed', seq.paused ? 'true' : 'false');
+    pauseBtn.setAttribute('aria-disabled', st === 'PLAYING' ? 'false' : 'true');
+    muteBtn.setAttribute('aria-pressed', media.muted ? 'true' : 'false');
+    stageEl.dataset.state = st.toLowerCase();
+    stageEl.dataset.paused = seq.paused ? 'true' : 'false';
+    stageEl.dataset.busy = busy ? 'true' : 'false';
     wake();
   }
-  function onEnded() { if (state === 'play') { ended = true; go(plain ? 'off' : 'cool'); if (plain) setStatus('ended'); } }
-  function onSeeked() { wake(); }
-  function wireMedia() {
-    media.addEventListener('ended', onEnded);
-    media.addEventListener('seeked', onSeeked);
-    if (filmTexture) setFilm();
+  function press() {
+    sound.unlock(); audio.unlock();
+    if (seq.state === 'IDLE') {
+      // inside the gesture: let the element play with sound later
+      if (media === video && video.paused) { const p = video.play(); if (p && p.then) p.then(() => { if (seq.state !== 'PLAYING') { video.pause(); video.currentTime = 0; } }).catch(() => {}); }
+      if (!plain) sound.click();
+    }
+    const r = seq.press();
+    if (r === 'pause') say('paused');
+    if (r === 'resume') say('playing');
+    if (r === 'ignored-start') say('waitStart');
+    if (r === 'ignored-end') say('waitEnd');
+    sync();
   }
-  video.addEventListener('ended', onEnded);
-  video.addEventListener('seeked', onSeeked);
-  video.addEventListener('error', () => { if (video.error) useCard('the film failed: ' + video.error.code); });
-  if (params.get('fallback') === '1' || !sources.length) useCard(sources.length ? '?fallback=1' : 'no film for this clip');
+  media.addEventListener('ended', () => { if (!seq) return; if (plain) { seq.jump('IDLE'); say('over'); sync(); } else seq.ended_(); });
+  let btn = null, wake = () => {};
 
   // ---------- WebGL, or the plain film ----------
   const canvas = document.createElement('canvas');
   let gl = null;
-  try { gl = canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' }) || canvas.getContext('webgl', { antialias: true, alpha: false }); } catch (e) { gl = null; }
+  try { gl = canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
   plain = !gl || params.get('screening') === 'plain';
-
   function bindButtons() {
-    button.addEventListener('click', press);
-    pauseBtn.addEventListener('click', () => { if (pauseBtn.getAttribute('aria-disabled') !== 'true') setPaused(!paused); });
+    button.addEventListener('click', () => { if (button.getAttribute('aria-disabled') === 'true') { say(seq.state === 'OPENING' || seq.state === 'COUNTDOWN' ? 'waitStart' : 'waitEnd'); return; } press(); });
+    pauseBtn.addEventListener('click', () => { if (pauseBtn.getAttribute('aria-disabled') !== 'true') press(); });
     muteBtn.addEventListener('click', () => {
-      media.muted = !media.muted;
-      sound.muted = media.muted;
-      if (!media.muted && status.textContent === STATUS.blocked) setStatus(state === 'play' ? 'play' : '');
-      setPressed();
+      media.muted = !media.muted; audio.muted = media.muted; sound.muted = media.muted;
+      if (!media.muted && status.textContent === STATUS.blocked) say(seq.state === 'PLAYING' ? 'playing' : 'idle');
+      sync();
     });
   }
-  let wake = () => {};
-
-  // the film's own still is only needed where the plain <video> is shown (a poster attribute would load with the page)
-  const showPoster = () => { if (video.dataset.poster) video.poster = video.dataset.poster; };
-  if (plain) {
-    showPoster();
-    stage.dataset.scene = 'plain';
-    section.__screening = { plain: true, state: () => ({ state, paused, plain: true, time: media.currentTime }), press, media: () => media };
-    bindButtons();
+  const goPlain = () => {
+    plain = true;
+    if (video.dataset.poster) video.poster = video.dataset.poster;
+    stageEl.dataset.scene = 'plain';
+    // without the 3D room there is no curtain or countdown: the press plays the film
+    seq = createSequence({ media, reduce: () => true, onState });
+    const press0 = seq.press;
+    seq.press = () => { if (seq.state === 'IDLE') { seq.jump('PLAYING'); media.currentTime = 0; media.play().catch(() => {}); return 'start'; } return press0(); };
+    section.__screening = { plain: true, state: () => ({ state: seq.state, paused: seq.paused, plain: true, time: media.currentTime }), press, media: () => media };
+    bindButtons(); sync(); say('idle');
     if (section.dataset.pending === 'play') { delete section.dataset.pending; press(); }
-    setPressed();
     return section.__screening;
-  }
+  };
+  if (plain) return goPlain();
 
-  // ---------- renderer and room ----------
+  // ---------- renderer, stage, curtain ----------
   const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(new THREE.Color(CONFIG.palette.wall), 1);
-  renderer.autoClear = false;
+  renderer.localClippingEnabled = true;
   canvas.className = 'screening-canvas';
   canvas.setAttribute('aria-hidden', 'true');
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.1, 60);
-
+  const camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 60);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const roomEnv = new RoomEnvironment();
   const envMap = pmrem.fromScene(roomEnv, 0.04).texture;
   roomEnv.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   pmrem.dispose();
   scene.environment = envMap;
-  scene.environmentIntensity = 0.3;
+  scene.environmentIntensity = 0.12;
 
-  const P = CONFIG.palette, S = CONFIG.screen;
-  const screenCentre = new THREE.Vector3().fromArray(S.centre);
-  const lambert = (c) => new THREE.MeshLambertMaterial({ color: new THREE.Color(c) });
-  const disposables = [];
-  const keep = (...xs) => { disposables.push(...xs); return xs[0]; };
-  const wallMat = keep(lambert(P.wall)), floorMat = keep(lambert(P.floor)), seatMat = keep(lambert(P.seat)), frameMat = keep(lambert(P.ink));
-  const wall = new THREE.Mesh(keep(new THREE.PlaneGeometry(26, 14)), wallMat);
-  wall.position.set(0, 5, screenCentre.z - 0.08);
-  const floor = new THREE.Mesh(keep(new THREE.PlaneGeometry(26, 22)), floorMat);
-  floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, 2);
-  const curtainMap = keep(curtainTexture());
-  const curtainMat = keep(new THREE.MeshLambertMaterial({ map: curtainMap }));
-  const curtains = [-1, 1].map((sx) => {
-    const m = new THREE.Mesh(keep(new THREE.PlaneGeometry(3.2, 6.5)), curtainMat);
-    m.position.set(sx * (S.width / 2 + 1.75), 3.25, screenCentre.z + 0.05);
-    return m;
-  });
-  const valance = new THREE.Mesh(keep(new THREE.PlaneGeometry(S.width + 7, 1.2)), curtainMat);
-  valance.position.set(0, screenCentre.y + S.height / 2 + 0.85, screenCentre.z + 0.06);
-  const border = new THREE.Group();
-  const bar = (w, h, x, y) => { const m = new THREE.Mesh(keep(new THREE.BoxGeometry(w, h, 0.08)), frameMat); m.position.set(x, y, 0); border.add(m); };
-  const fw = 0.14;
-  bar(S.width + fw * 2, fw, 0, S.height / 2 + fw / 2); bar(S.width + fw * 2, fw, 0, -S.height / 2 - fw / 2);
-  bar(fw, S.height, S.width / 2 + fw / 2, 0); bar(fw, S.height, -S.width / 2 - fw / 2, 0);
-  border.position.copy(screenCentre);
-  const scr = screenMaterial();
-  keep(scr.material);
-  const screenMesh = new THREE.Mesh(keep(new THREE.PlaneGeometry(S.width, S.height)), scr.material);
-  screenMesh.position.copy(screenCentre);
-  // rows of seats between the projector and the screen (only their backs are seen)
-  const seatGeo = keep(new THREE.BoxGeometry(0.53, 0.86, 0.12));
-  const seatSpots = [];
-  for (const z of [1.15, 0.05, -1.05, -2.15, -3.25]) for (let x = -5.25; x <= 5.26; x += 0.55) if (Math.abs(x) > 0.5) seatSpots.push([x, z]);
-  const seats = new THREE.InstancedMesh(seatGeo, seatMat, seatSpots.length);
-  const m4 = new THREE.Matrix4();
-  seatSpots.forEach(([x, z], i) => { m4.makeTranslation(x, 0.43, z); seats.setMatrixAt(i, m4); });
-  const standMat = keep(lambert('#232325'));
-  const stand = new THREE.Mesh(keep(new THREE.BoxGeometry(0.62, 1, 0.62)), standMat);
-  scene.add(wall, floor, ...curtains, valance, border, screenMesh, seats, stand);
+  const stage = createStage();
+  const S = stage.S;
+  scene.add(stage.group);
+  const curtain = createCurtain(S, mobile);
+  scene.add(curtain.group);
+  curtain.setFade(reduce());
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-  const screenLight = new THREE.PointLight(new THREE.Color(P.paper), 0, 16, 1.6);
-  screenLight.position.set(screenCentre.x, screenCentre.y, screenCentre.z + 1.2);
-  const keyLight = new THREE.SpotLight(new THREE.Color(P.paper), 30, 12, 0.55, 0.7, 1.2);
-  const beamLight = new THREE.DirectionalLight(new THREE.Color(P.beam), 0);
-  scene.add(ambient, screenLight, keyLight, keyLight.target, beamLight, beamLight.target);
+  // the screen: the film shader on a plane at z = 0
+  const film = createFilm(renderer, { mobile, video, texture: card ? card.texture : null, ready: card ? () => true : null });
+  film.setGuards([P.exitAt, P.returnAt], 15.072);
+  const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(S.W, S.H), film.material);
+  screenMesh.position.copy(S.centre);
+  scene.add(screenMesh);
+  const leader = createLeader();
+
+  // light: a dim room, the screen's own light toward the audience, the projector's beam light, a soft key on the projector
+  const ambient = new THREE.AmbientLight(0xffffff, 0.08);
+  const screenLight = new THREE.SpotLight(0xffffff, 0, 30, 1.25, 1.0, 1.4);
+  screenLight.position.set(0, S.centre.y, 0.05); screenLight.target.position.set(0, S.centre.y - 0.6, 8);
+  const beamSpot = new THREE.SpotLight(0xffffff, 0, 30, 0.3, 0.35, 1.0);
+  const keyLight = new THREE.SpotLight(0xffffff, 30, 14, 0.5, 0.7, 1.0);
+  scene.add(ambient, screenLight, screenLight.target, beamSpot, beamSpot.target, keyLight, keyLight.target);
 
   // ---------- models ----------
   const draco = new DRACOLoader().setDecoderPath(CONFIG.draco);
   const loader = new GLTFLoader().setDRACOLoader(draco);
-  const gradient = keep(toonGradient());
-  const members = [...new Set(SCREENING.clips.map((c) => c.member))];
-  const [projector, ...players] = await Promise.all([
-    loadProjector(loader),
-    ...members.map((m) => loadPlayer(m, loader, gradient).catch((e) => { console.warn('screening: no 3D ' + m + ' —', e && e.message); return null; })),
-  ]).catch((e) => { console.warn('screening: the room could not load —', e && e.message); return [null]; });
+  const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);       // keeps what is in front of the screen
+  const ink = createInk({ film: film.shared, clipPlane });
+  let projector = null, fm = null;
+  try {
+    [projector, fm] = await Promise.all([
+      loadProjector(loader),
+      loadFrontman(loader, ink).catch((e) => { console.warn('screening: no 3D frontman —', e && e.message); return null; }),
+    ]);
+  } catch (e) { console.warn('screening: the room could not load —', e && e.message); }
   draco.dispose();
-  if (!projector || !alive) {
-    plain = true;
-    showPoster();
-    stage.dataset.scene = 'plain';
-    renderer.dispose();
-    section.__screening = { plain: true, state: () => ({ state, paused, plain: true }), press, media: () => media };
-    bindButtons();
-    setPressed();
-    if (section.dataset.pending === 'play') { delete section.dataset.pending; press(); }
-    return section.__screening;
-  }
+  if (!projector || !alive) { renderer.dispose(); return goPlain(); }
   const rig = new THREE.Group();
   rig.add(projector.root);
   scene.add(rig);
-  const player = Object.fromEntries(members.map((m, i) => [m, players[i]]));
-  for (const p of players) if (p) scene.add(p.holder);
-
+  if (fm) scene.add(fm.holder);
+  const puffs = createPuffs();
+  puffs.sprites.forEach((s) => scene.add(s));
   const beam = createBeam();
   const dust = createDust(Math.round(CONFIG.performance.dust * (mobile ? 0.5 : 1)));
   scene.add(beam.mesh, dust.points);
-  const leader = createLeader();
-  disposables.push(beam, dust, leader);
-  scr.uniforms.uLeader.value = leader.texture;
-  function setFilm() {
-    if (filmTexture && filmTexture !== (card && card.texture)) filmTexture.dispose();
-    filmTexture = card ? card.texture : new THREE.VideoTexture(video);
-    filmTexture.colorSpace = THREE.SRGBColorSpace;
-    scr.uniforms.uFilm.value = filmTexture;
-  }
-  setFilm();
-  const grain = mobile ? null : grainPass();
+  btn = createProjectorButton(stageEl, button);
+
+  // ---------- the frontman's shadow on the screen: his silhouette seen from the lens, framed to the screen ----------
+  const shadowSize = mobile ? CONFIG.performance.shadowMap.mobile : CONFIG.performance.shadowMap.desktop;
+  const shadowRT = new THREE.WebGLRenderTarget(shadowSize, Math.round(shadowSize / SCREENING.clip.aspect), { depthBuffer: true });
+  const shadowCam = new THREE.PerspectiveCamera();
+  const shadowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  if (fm) fm.holder.traverse((o) => { if (o.isMesh && o.material !== fm.materials[fm.materials.length - 1]) o.layers.enable(2); });
+  shadowCam.layers.set(2);
+  film.uniforms.uShadow.value = shadowRT.texture;
 
   // ---------- layout ----------
-  let width = 0, height = 0;
-  const lens = new THREE.Vector3(), box = new THREE.Box3(), v3 = new THREE.Vector3();
-  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => new THREE.Vector3(screenCentre.x + x * S.width / 2, screenCentre.y + y * S.height / 2, screenCentre.z + 0.01));
-  function placeRoom() {
-    const [px, py, pz] = CONFIG.projectorAt;
-    rig.position.set(px, py, pz);
-    rig.scale.setScalar(CONFIG.projectorSize);
-    const dx = screenCentre.x - px, dz = screenCentre.z - pz, dy = screenCentre.y - (py + 0.212 * CONFIG.projectorSize);
-    rig.rotation.set(0, Math.atan2(-dz, dx), Math.atan2(dy, Math.hypot(dx, dz)) * 0.9, 'YZX');
-    stand.scale.set(1, py, 1); stand.position.set(px, py / 2, pz);
+  let width = 0, height = 0, fit = null;
+  const lens = new THREE.Vector3();
+  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => new THREE.Vector3(x * S.W / 2, S.centre.y + y * S.H / 2, 0.01));
+  function layout() {
+    fit = stage.fit(camera, width, height, mobile);
+    rig.position.copy(fit.projectorAt);
+    rig.scale.setScalar(fit.projectorSize);
+    const dy = S.centre.y - (fit.projectorAt.y + 0.212 * fit.projectorSize), dz = -fit.projectorAt.z;
+    rig.rotation.set(0, Math.PI / 2, Math.atan2(dy, -dz) * 0.95, 'YZX');
     scene.updateMatrixWorld(true);
     projector.lens(lens);
     beam.aim(lens, corners);
     dust.aim(beam.corners.from, corners);
-    keyLight.position.set(px + 1.2, py + 3.4, pz + 2.2); keyLight.target.position.set(px, py + 0.3, pz);
-    beamLight.position.copy(lens); beamLight.target.position.copy(screenCentre);
-  }
-  placeRoom();
-  function placeButton() {
-    // the projector's button sits over the projector on the canvas
-    box.setFromObject(projector.root);
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < 8; i++) {
-      v3.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera);
-      const x = (v3.x * 0.5 + 0.5) * width, y = (0.5 - v3.y * 0.5) * height;
-      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-    }
-    x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(width, x1); y1 = Math.min(height, y1);      // the part in the picture
-    const w = Math.max(44, x1 - x0), h = Math.max(44, y1 - y0), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    stage.style.setProperty('--proj-x', (cx - w / 2).toFixed(1) + 'px');
-    stage.style.setProperty('--proj-y', Math.min(height - h, cy - h / 2).toFixed(1) + 'px');
-    stage.style.setProperty('--proj-w', w.toFixed(1) + 'px');
-    stage.style.setProperty('--proj-h', h.toFixed(1) + 'px');
+    beamSpot.position.copy(lens); beamSpot.target.position.copy(S.centre);
+    beamSpot.angle = Math.atan2(Math.hypot(S.W, S.H) / 2, lens.z) * 1.05;
+    keyLight.position.set(fit.projectorAt.x + 0.9, fit.projectorAt.y + 3.0, fit.projectorAt.z + 1.8); keyLight.target.position.copy(fit.projectorAt);
+    // shadow camera: at the lens, looking straight at the screen, its frustum exactly the screen
+    shadowCam.position.copy(lens); shadowCam.rotation.set(0, 0, 0); shadowCam.updateMatrixWorld();
+    const n = 0.05, d = lens.z;
+    shadowCam.projectionMatrix.makePerspective((-S.W / 2 - lens.x) * n / d, (S.W / 2 - lens.x) * n / d, (S.top - lens.y) * n / d, (S.bottom - lens.y) * n / d, n, 40);
+    shadowCam.projectionMatrixInverse.copy(shadowCam.projectionMatrix).invert();
+    btn.place(projector.root, camera, width, height);
+    ink.uniforms.uRes.value.set(width * renderer.getPixelRatio(), height * renderer.getPixelRatio());
+    // 1.5-2.5 CSS px whatever the distance (the hull is pushed out in clip space)
+    ink.uniforms.uOutlinePx.value = THREE.MathUtils.clamp(1.5 + width / 1280, CONFIG.performance.outlinePx[0], CONFIG.performance.outlinePx[1]) * renderer.getPixelRatio();
+    ink.uniforms.uHatchPx.value = 4.5 * renderer.getPixelRatio();
+    const pixels = height * renderer.getPixelRatio() / (2 * fit.tv);
+    dust.uniforms.uScale.value = pixels * 0.012;
   }
   function resize(force) {
-    const w = stage.clientWidth, h = stage.clientHeight;
+    const w = stageEl.clientWidth, h = stageEl.clientHeight;
     if (!w || !h || (!force && w === width && h === height)) return;
     width = w; height = h;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CONFIG.performance.maxDpr));
     renderer.setSize(w, h, false);
-    const L = layoutFor(w / h);
-    camera.fov = L.fov; camera.aspect = w / h;
-    camera.position.fromArray(L.eye); camera.lookAt(new THREE.Vector3().fromArray(L.look));
-    camera.updateProjectionMatrix();
-    camera.updateMatrixWorld();
-    const pixels = h * renderer.getPixelRatio() / (2 * Math.tan(THREE.MathUtils.degToRad(L.fov / 2)));
-    dust.uniforms.uScale.value = pixels * 0.012;
-    placeButton();
+    layout();
   }
 
   // ---------- one frame ----------
-  let last = 0, raf = 0, visible = false, clock = 0, held = false, lastPlace = null, beamLevel = 0, reelSpeed = 0, lamp = 0;
+  let last = 0, raf = 0, visible = false, clock = 0, held = false, lastPlace = null, lv = null, frameInfo = null;
   const stats = { frames: 0, fps: 0, acc: 0, n: 0 };
-  function flickerLamp(t) {
-    if (reduce.matches) return 1;
-    if (t < CONFIG.lamp) return [1, 0, 1, 0.3, 1][Math.floor(t / CONFIG.lamp * 5)];
-    return 1;
+  const screenPx = [0, 0];
+  const v3 = new THREE.Vector3();
+  function screenPixels() {
+    v3.set(-S.W / 2, S.top, 0).project(camera); const x0 = v3.x, y0 = v3.y;
+    v3.set(S.W / 2, S.bottom, 0).project(camera);
+    screenPx[0] = Math.abs(v3.x - x0) / 2 * width * renderer.getPixelRatio(); screenPx[1] = Math.abs(v3.y - y0) / 2 * height * renderer.getPixelRatio();
+    return screenPx;
   }
   function frame(dt) {
-    if (!paused && !held) seqT += dt;
-    clock += reduce.matches ? 0 : dt;
-    let bright = 0, mode = 0;
-    if (state === 'warm') {
-      lamp = flickerLamp(seqT);
-      reelSpeed = smooth(0, CONFIG.reelSpinUp, seqT);
-      beamLevel = smooth(CONFIG.lamp, CONFIG.lamp + CONFIG.beamRise, seqT) * lamp;
-      bright = beamLevel; mode = 2;
-      if (seqT >= CONFIG.lamp + CONFIG.beamRise) go('count');
-    } else if (state === 'count') {
-      lamp = 1; reelSpeed = 1; beamLevel = 1; bright = 1;
-      leader.draw(Math.min(seqT, CONFIG.countdown - 0.001));
-      if (seqT >= CONFIG.countdown) go('play');
-    } else if (state === 'play') {
-      lamp = 1; reelSpeed = paused ? 0 : 1; beamLevel = 1; bright = 1; mode = 1;
-      if (card) card.draw();
-    } else if (state === 'cool') {
-      const k = 1 - smooth(0, CONFIG.fadeOut, seqT);
-      lamp = k; reelSpeed = k; beamLevel = k; bright = k; mode = 1;
-      if (seqT >= CONFIG.fadeOut) { go('off'); if (ended) setStatus('ended'); }
-    } else {
-      lamp = 0; reelSpeed = 0; beamLevel = 0; bright = 0;
-    }
-    if (paused && state !== 'play') reelSpeed = 0;
-    if (state !== 'off' && !paused) sound.run(reelSpeed); else sound.run(0);
-    projector.update(dt, reelSpeed, lamp);
-    beam.uniforms.uIntensity.value = beamLevel;
-    beam.uniforms.uTime.value = clock;
-    dust.uniforms.uIntensity.value = beamLevel;
-    dust.uniforms.uTime.value = clock;
-    scr.uniforms.uBright.value = bright;
-    scr.uniforms.uMode.value = mode;
-    scr.uniforms.uTime.value = clock;
-    scr.uniforms.uFlicker.value = reduce.matches ? 0 : 1;
-    screenLight.intensity = 9 * bright;
-    beamLight.intensity = 2.2 * beamLevel;
-    keyLight.intensity = 30 * (1 - 0.5 * beamLevel);
-    // the player follows the film's own clock
-    const c = clip(), p = player[c.member];
+    const motion = !reduce();
+    if (!held) lv = seq.update(dt); else lv = seq.update(0);
+    clock += motion ? dt : 0;
     const t = media.currentTime || 0;
-    const place = placeAt(state === 'play' || state === 'cool' ? t : -1, c, p || { height: 1.75, durations: { emerge: 1, solo: 3, return: 1 } },
-      { centre: screenCentre, width: S.width, height: S.height }, !reduce.matches && !!p);
-    for (const q of players) if (q) q.holder.visible = false;
-    if (p) applyPlace(p, place, 0.55 * beamLevel);
-    if (place.ripple >= 0) {
-      const sp = c.screenPos;
-      scr.uniforms.uRipple.value.set(0.5 + sp[0], 0.5 + sp[1] + c.screenScale * 0.45, reduce.matches ? -1 : place.ripple);
-    } else scr.uniforms.uRipple.value.z = -1;
-    lastPlace = place;
-    renderer.clear();
-    renderer.render(scene, camera);
-    if (grain && state !== 'off') {
-      grain.uniforms.uTime.value = reduce.matches ? 0 : Math.floor(clock * 24) / 24;
-      grain.uniforms.uAmount.value = 0.05 + 0.03 * beamLevel;
-      renderer.render(grain.scene, grain.camera);
+    // curtain
+    curtain.set(lv.curtain, lv.curtainVel, lv.sway);
+    // projector: lamp, reels, the idle breath, hover and the press bounce
+    const idle = seq.state === 'IDLE';
+    const hover = btn.hover && idle ? 1 : 0;
+    projector.update(dt, lv.reel, Math.max(lv.lamp, hover * 0.45), { hover, twitch: lv.breathe });
+    const bounce = motion ? btn.press() : 0;
+    rig.scale.set(fit.projectorSize * (1 + 0.02 * bounce), fit.projectorSize * (1 - 0.035 * bounce), fit.projectorSize * (1 + 0.02 * bounce));
+    if (lv.reel > 0 && !seq.paused) sound.run(Math.min(1, lv.reel)); else sound.run(0);
+    // the screen
+    const mode = lv.source === 'film' ? 'film' : lv.source === 'leader' ? 'leader' : lv.source === 'off' ? 'off' : 'light';
+    if (mode === 'leader') leader.draw(lv.leaderT);
+    if (card && mode === 'film') card.draw();
+    frameInfo = film.update({ mode, bright: lv.bright, t, clock, motion, leaderTexture: leader.texture, screenPx: screenPixels() });
+    // the room breathes with the film: beam, dust, screen light, beam light
+    const exposure = film.shared.uExposure.value;
+    beam.uniforms.uIntensity.value = lv.beam * exposure; beam.uniforms.uTime.value = clock;
+    dust.uniforms.uIntensity.value = lv.beam * exposure; dust.uniforms.uTime.value = clock;
+    screenLight.intensity = 22 * lv.bright * film.luminance * exposure;
+    beamSpot.intensity = 14 * lv.beam * exposure;
+    keyLight.intensity = 30 * (1 - 0.5 * lv.beam);
+    // the frontman
+    const playing = seq.state === 'PLAYING' || seq.state === 'RUNOUT';
+    const place = fm ? placeAt(playing ? t : -1, fit, S, fm, motion) : { visible: false, puffs: [-1, -1], ripple: -1 };
+    if (fm) {
+      applyPlace(fm, place);
+      ink.uniforms.uFilmness.value = place.filmness;
+      ink.uniforms.uRim.value = 0.35 * film.luminance * lv.bright;
     }
+    const puffSize = S.H * 0.32;
+    puffs.set(0, place.exitPt || v3.set(0, 0, 0), playing ? place.puffs[0] : -1, puffSize);
+    puffs.set(1, place.retPt || v3.set(0, 0, 0), playing ? place.puffs[1] : -1, puffSize * 0.75);
+    film.uniforms.uRipple.value.set(0.5 + P.returnX, 0.97, playing && place.ripple >= 0 ? place.ripple : -1);
+    // his shadow on the film, only while he is out and the beam is on
+    const shadowOn = !!(fm && place.visible && lv.beam > 0.2 && motion);
+    film.uniforms.uShadowOn.value = shadowOn ? 1 : 0;
+    if (shadowOn) {
+      const prevClear = renderer.getClearColor(new THREE.Color()), prevAlpha = renderer.getClearAlpha();
+      renderer.setRenderTarget(shadowRT);
+      renderer.setClearColor(0x000000, 1); renderer.clear();
+      scene.overrideMaterial = shadowMat;
+      const planes = renderer.clippingPlanes; renderer.clippingPlanes = [];
+      renderer.render(scene, shadowCam);
+      renderer.clippingPlanes = planes;
+      scene.overrideMaterial = null;
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(prevClear, prevAlpha);
+    }
+    lastPlace = place;
+    renderer.render(scene, camera);
     stats.frames++;
   }
-  function needsLoop() { return alive && visible && !document.hidden && (state !== 'off' || dust.uniforms.uIntensity.value > 0); }
+  function needsLoop() { return alive && visible && !document.hidden && (seq.state !== 'IDLE' || !reduce()); }
   function tick(now) {
     raf = 0;
     if (!alive) return;
@@ -478,22 +329,17 @@ export async function activate(section) {
     frame(dt);
     if (needsLoop()) raf = requestAnimationFrame(tick); else last = 0;
   }
-  wake = function () {
-    if (!alive || raf) return;
-    if (!visible || document.hidden) return;
-    raf = requestAnimationFrame(tick);
-  };
+  wake = function () { if (!alive || raf || !visible || document.hidden) return; raf = requestAnimationFrame(tick); };
   function drawOnce() { if (alive && visible && !document.hidden) { resize(); frame(0); } }
 
   // ---------- page wiring ----------
   const io = new IntersectionObserver((es) => { visible = es[es.length - 1].isIntersecting; if (visible) wake(); }, { threshold: 0.01 });
   const ro = new ResizeObserver(() => { if (!raf) drawOnce(); });
   const onVisibility = () => { if (!document.hidden) wake(); };
-  const onMotion = () => wake();
+  const onMotion = () => { curtain.setFade(reduce()); wake(); };
   document.addEventListener('visibilitychange', onVisibility);
-  reduce.addEventListener('change', onMotion);
-  const onLost = (e) => { e.preventDefault(); destroy(); showPoster(); stage.dataset.scene = 'plain'; plain = true; };
-  canvas.addEventListener('webglcontextlost', onLost);
+  reduceMq.addEventListener('change', onMotion);
+  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); destroy(); goPlain(); });
 
   function destroy() {
     if (!alive) return;
@@ -501,61 +347,79 @@ export async function activate(section) {
     cancelAnimationFrame(raf);
     io.disconnect(); ro.disconnect();
     document.removeEventListener('visibilitychange', onVisibility);
-    reduce.removeEventListener('change', onMotion);
-    sound.dispose();
-    projector.dispose();
-    players.forEach((p) => p && p.dispose());
-    disposables.forEach((d) => d && d.dispose && d.dispose());
-    if (filmTexture && filmTexture.dispose) filmTexture.dispose();
-    if (grain) grain.dispose();
-    seats.dispose();
-    envMap.dispose();
+    reduceMq.removeEventListener('change', onMotion);
+    audio.dispose(); sound.dispose();
+    projector.dispose(); if (fm) fm.dispose();
+    [stage, curtain, film, leader, beam, dust, puffs, ink].forEach((x) => x && x.dispose && x.dispose());
+    shadowRT.dispose(); shadowMat.dispose(); envMap.dispose();
     renderer.dispose();
     canvas.remove();
   }
 
+  seq = createSequence({ media: { get currentTime() { return media.currentTime; }, set currentTime(v) { media.currentTime = v; }, play: () => media.play(), pause: () => media.pause() }, reduce, onState });
+
   const api = {
-    destroy, press, setPaused,
-    clip, media: () => media, phase: () => (lastPlace ? lastPlace.phase : 'screen'),
+    destroy, press,
+    clip: () => P, media: () => media, phase: () => (lastPlace ? lastPlace.phase : 'screen'),
     seek(t) { media.currentTime = Math.max(0, t); drawOnce(); },
-    changed() { drawOnce(); },
+    changed() { film.setGuards([P.exitAt, P.returnAt], 15.072); drawOnce(); },
     state: () => ({
-      state, paused, seqT: +seqT.toFixed(3), time: +(media.currentTime || 0).toFixed(3), muted: media.muted, film: card ? 'stand-in' : 'video',
-      reduced: reduce.matches, mobile, dpr: renderer.getPixelRatio(), size: [width, height], fps: Math.round(stats.fps), frames: stats.frames,
-      grain: !!grain, dust: dust.points.geometry.attributes.seed.count, running: !!raf, visible,
-      player: lastPlace ? { visible: lastPlace.visible, phase: lastPlace.phase, ripple: lastPlace.ripple,
+      state: seq.state, paused: seq.paused, t: +seq.t.toFixed(3), time: +(media.currentTime || 0).toFixed(3), muted: media.muted,
+      film: card ? 'stand-in' : 'video', reduced: reduce(), mobile, dpr: renderer.getPixelRatio(), size: [width, height],
+      fps: Math.round(stats.fps), frames: stats.frames, running: !!raf, visible,
+      curtain: lv ? +lv.curtain.toFixed(3) : null, beam: lv ? +lv.beam.toFixed(3) : 0, shownFrame: frameInfo ? frameInfo.frame : null,
+      exposure: +film.shared.uExposure.value.toFixed(4), luminance: +film.luminance.toFixed(3), vintage: audio.routed,
+      player: lastPlace ? { visible: lastPlace.visible, phase: lastPlace.phase, filmness: lastPlace.filmness,
         position: lastPlace.position ? lastPlace.position.toArray().map((x) => +x.toFixed(3)) : null, scale: lastPlace.scale ? +lastPlace.scale.toFixed(3) : null } : null,
-      models: Object.fromEntries(members.map((m) => [m, !!player[m]])),
-      beam: +beamLevel.toFixed(3), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles,
+      model: !!fm, seats: SCREENING.stage.seats, seatNames: (() => { let n = 0; scene.traverse((o) => { if (/seat/i.test(o.name)) n++; }); return n; })(),
+      fit: fit ? { share: +fit.share.toFixed(3), headroom: fit.headroom } : null, label: button.getAttribute('aria-label'),
     }),
-    // for the checks: hold the sequence clock still (captures), and put the scene in a given state without waiting
+    /** the screen's rectangle on the canvas, in CSS px: [x, y, w, h] */
+    screenRect() {
+      v3.set(-S.W / 2, S.top, 0).project(camera); const x0 = (v3.x * 0.5 + 0.5) * width, y0 = (0.5 - v3.y * 0.5) * height;
+      v3.set(S.W / 2, S.bottom, 0).project(camera); const x1 = (v3.x * 0.5 + 0.5) * width, y1 = (0.5 - v3.y * 0.5) * height;
+      return [x0, y0, x1 - x0, y1 - y0];
+    },
+    /** where the frontman is on the canvas: [x, y top, y bottom] in CSS px, or null */
+    playerRect() {
+      if (!fm || !fm.holder.visible) return null;
+      const b = new THREE.Box3().setFromObject(fm.holder), pts = [];
+      for (let i = 0; i < 8; i++) { v3.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).project(camera); pts.push([(v3.x * 0.5 + 0.5) * width, (0.5 - v3.y * 0.5) * height]); }
+      return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+    },
+    /** the world x of the exit / return points as a share of the screen width from its centre */
+    cuePoints: () => ({ exitX: P.exitX, returnX: P.returnX }),
     hold(on) { held = !!on; },
-    jump(next, at = 0) { paused = false; if (next === 'play') { state = 'play'; seqT = 0; media.currentTime = at; } else { go(next); seqT = at; } setPressed(); drawOnce(); },
-    // screen position of the 3D player's head (for the checks)
-    playerScreen() {
-      const p = player[clip().member];
-      if (!p || !p.holder.visible) return null;
-      box.setFromObject(p.holder);
-      const c = box.getCenter(new THREE.Vector3()).project(camera);
-      return [(c.x * 0.5 + 0.5) * width, (0.5 - c.y * 0.5) * height];
+    jump(next, at = 0) {
+      if (next === 'PLAYING') { seq.jump('PLAYING', 0); media.currentTime = at; } else seq.jump(next, at);
+      drawOnce();
     },
   };
 
-  // ---------- show it ----------
-  stage.insertBefore(canvas, stage.firstChild);
+  // ---------- show it: everything compiled first (the frontman too, so he never shows as an unlit white shape) ----------
+  stageEl.insertBefore(canvas, stageEl.firstChild);
   resize(true);
+  if (fm) { fm.holder.visible = true; fm.holder.position.set(0, S.centre.y, 2); }
+  puffs.sprites.forEach((s) => { s.visible = true; });
+  film.uniforms.uShadowOn.value = 1;
   await renderer.compileAsync(scene, camera);
+  const warm = new THREE.WebGLRenderTarget(64, 64);                         // warm every texture up, off screen
+  renderer.setRenderTarget(warm); renderer.render(scene, camera); renderer.setRenderTarget(null); warm.dispose();
+  if (fm) fm.holder.visible = false;
+  puffs.sprites.forEach((s) => { s.visible = false; });
+  film.uniforms.uShadowOn.value = 0;
   if (!alive) return api;
   visible = true;
   frame(0);
-  stage.dataset.scene = '3d';
-  const poster = stage.querySelector('.screening-poster');
+  stageEl.dataset.scene = '3d';
+  const poster = stageEl.querySelector('.screening-poster');
   if (poster) poster.setAttribute('aria-hidden', 'true');
   io.observe(section);
-  ro.observe(stage);
+  ro.observe(stageEl);
   section.__screening = api;
   bindButtons();
-  setPressed();
+  say('idle');
+  sync();
   if (params.get('debug') === 'cues') import('./debugCues.js').then((m) => m.mountCueDebugger(section, api));
   if (section.dataset.pending === 'play') { delete section.dataset.pending; press(); }
   return api;

@@ -8,7 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="fonts/OPTIFranklinGothic-Medium.otf" as="font" type="font/otf" crossorigin>
 <link rel="preload" href="fonts/futura-book.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" as="image" type="image/webp" media="(max-width:767px)" imagesrcset="images/screening-poster-phone-390.webp 390w, images/screening-poster-phone-780.webp 780w" imagesizes="100vw" fetchpriority="high">
+<link rel="preload" as="image" type="image/webp" media="(max-width:768px)" imagesrcset="images/screening-poster-phone-390.webp 390w, images/screening-poster-phone-780.webp 780w" imagesizes="100vw" fetchpriority="high">
 <link rel="preload" as="image" type="image/webp" media="(min-width:768px)" imagesrcset="images/screening-poster-wide-960.webp 960w, images/screening-poster-wide-1600.webp 1600w" imagesizes="100vw" fetchpriority="high">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <link rel="stylesheet" href="site-style-tokens.css"><link rel="stylesheet" href="style.css">
@@ -51,16 +51,18 @@
     <h1 class="sr-only">So What, a designer &amp; developer portfolio</h1>
     <div class="screening-stage" data-state="off" data-scene="static">
       <picture>
-        <source media="(max-width:767px)" type="image/webp" srcset="images/screening-poster-phone-390.webp 390w, images/screening-poster-phone-780.webp 780w" sizes="100vw" width="780" height="976">
+        <source media="(max-width:768px)" type="image/webp" srcset="images/screening-poster-phone-390.webp 390w, images/screening-poster-phone-780.webp 780w" sizes="100vw" width="780" height="976">
         <source type="image/webp" srcset="images/screening-poster-wide-960.webp 960w, images/screening-poster-wide-1600.webp 1600w" sizes="100vw" width="1600" height="900">
         <img class="screening-poster" src="images/screening-poster-wide-1600.jpg" width="1600" height="900" fetchpriority="high" alt="">
       </picture>
-      <p class="sr-only" id="screening-desc">An old cinema in the dark: a film projector stands among the seats, facing an empty screen. Press the projector to roll a black-and-white cartoon of a jazz trio. The singer jumps out of the screen, sings in the air above the seats, and dives back in. The film has sound.</p>
+      <p class="sr-only" id="screening-desc">An old cinema in the dark: a film projector faces a big screen. A red curtain hides the screen. Press the projector: the curtain opens and a black-and-white cartoon of a jazz trio rolls. The singer leaps out over the top of the screen, sings in the air in the projector's beam, and dives back in. When the film ends the curtain closes. The film has sound.</p>
       <video class="screening-video" preload="none" playsinline data-poster="images/screening-film-poster.jpg" width="1112" height="834" aria-describedby="screening-desc">
         <source src="media/seedance.mp4" type="video/mp4">
       </video>
-      <button class="screening-projector" type="button" aria-label="Play the screening" aria-pressed="false" aria-describedby="screening-desc" data-jazz="stab">
-        <span class="screening-hint" aria-hidden="true">Play the screening</span>
+      <!-- the projector itself is the button: a transparent button laid over it (src/screening/projectorButton.js). Its visible
+           label only shows when there is no 3D room (plain film) -->
+      <button class="screening-projector" type="button" aria-label="Play the screening" aria-describedby="screening-desc" data-jazz="stab">
+        <span class="screening-plain-label" aria-hidden="true">Play the screening</span>
       </button>
     </div>
     <div class="screening-bar">
@@ -68,7 +70,7 @@
       <div class="screening-controls">
         <button class="btn ghost-ink screening-pause" type="button" aria-pressed="false" aria-disabled="true" data-jazz="snap">Pause</button>
         <button class="btn ghost-ink screening-mute" type="button" aria-pressed="false" data-jazz="snap">Mute</button>
-        <p class="screening-status" role="status"></p>
+        <p class="screening-status" role="status">Press the projector to start the show.</p>
       </div>
       <a class="screening-cue" href="#work" data-jazz="pluck">See the work</a>
     </div>
@@ -100,11 +102,11 @@
     </div>
     <!-- The works, in book order. id = link target (#work-01 …), .cap = the title shown in the book, the contents and the grid. -->
     <ol class="panels">
-      <li class="panel tall tone-dots" id="work-01"><p class="cap">01. Bill Evans</p><img src="images/work-01.jpg" width="896" height="1152" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of Bill Evans in glasses and a dark suit, looking down"><p class="panel-note" aria-hidden="true">Glasses, dark suit</p></li>
-      <li class="panel tall tone-lines" id="work-02"><p class="cap">02. Chet Baker</p><img src="images/work-02.jpg" width="1080" height="1389" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of Chet Baker in black, holding his trumpet"><p class="panel-note" aria-hidden="true">Trumpet in hand</p></li>
-      <li class="panel tall tone-hatch cap-bottom" id="work-03"><p class="cap">03. Miles Davis</p><img src="images/work-04.jpg" width="1080" height="1389" loading="lazy" decoding="async" fetchpriority="low" alt="Ink poster of Miles Davis playing the trumpet, with his name at the top"><p class="panel-note" aria-hidden="true">Poster with trumpet</p></li>
-      <li class="panel tall tone-blue" id="work-04"><p class="cap">04. Clifford Brown</p><img src="images/work-05.jpg" width="896" height="1152" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of Clifford Brown in profile, eyes closed, holding his trumpet against his chest"><p class="panel-note" aria-hidden="true">Profile, eyes closed</p></li>
-      <li class="panel tall tone-dots-dense" id="work-05"><p class="cap">05. John Coltrane</p><img src="images/work-06.jpg" width="896" height="1152" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of John Coltrane playing the saxophone, seen close up from the side"><p class="panel-note" aria-hidden="true">Saxophone, close up</p></li>
+      <li class="panel tall tone-dots" id="work-01"><p class="cap">01. Bill Evans</p><img src="images/work-01.jpg" width="896" height="1152" loading="eager" decoding="async" fetchpriority="low" alt="Ink portrait of Bill Evans in glasses and a dark suit, looking down"><p class="panel-note" aria-hidden="true">Glasses, dark suit</p></li>
+      <li class="panel tall tone-lines" id="work-02"><p class="cap">02. Chet Baker</p><img src="images/work-02.jpg" width="1080" height="1389" loading="eager" decoding="async" fetchpriority="low" alt="Ink portrait of Chet Baker in black, holding his trumpet"><p class="panel-note" aria-hidden="true">Trumpet in hand</p></li>
+      <li class="panel tall tone-hatch cap-bottom" id="work-03"><p class="cap">03. Miles Davis</p><img src="images/work-04.jpg" width="1080" height="1389" loading="eager" decoding="async" fetchpriority="low" alt="Ink poster of Miles Davis playing the trumpet, with his name at the top"><p class="panel-note" aria-hidden="true">Poster with trumpet</p></li>
+      <li class="panel tall tone-blue" id="work-04"><p class="cap">04. Clifford Brown</p><img src="images/work-05.jpg" width="896" height="1152" loading="eager" decoding="async" fetchpriority="low" alt="Ink portrait of Clifford Brown in profile, eyes closed, holding his trumpet against his chest"><p class="panel-note" aria-hidden="true">Profile, eyes closed</p></li>
+      <li class="panel tall tone-dots-dense" id="work-05"><p class="cap">05. John Coltrane</p><img src="images/work-06.jpg" width="896" height="1152" loading="eager" decoding="async" fetchpriority="low" alt="Ink portrait of John Coltrane playing the saxophone, seen close up from the side"><p class="panel-note" aria-hidden="true">Saxophone, close up</p></li>
     </ol>
   </section>
 

@@ -133,9 +133,9 @@ header.site .head-link{display:inline-flex;align-items:center;justify-content:ce
    the title, Pause and Mute, and "See the work". Desktop: bar + menu + picture = about 80% of the window, so the next section shows. */
 .screening{background:var(--ink)}
 .screening-title{font-weight:400;font-size:var(--size-small);line-height:1.2;text-transform:uppercase;letter-spacing:.08em;color:var(--paper-muted);white-space:nowrap}
-.screening-stage{position:relative;isolation:isolate;width:100%;overflow:hidden;background:var(--ink);
-  height:min(56.25vw,calc(80vh - var(--marquee-height) - var(--nav-h) - 64px));height:min(56.25vw,calc(80svh - var(--marquee-height) - var(--nav-h) - 64px))}
-@media (max-width:767px){.screening-stage{height:125vw}}
+/* canvas shape (src/screening/config.js stage.canvasAspect): 16:9 on desktop (never taller than the window), 4:5 on phones */
+.screening-stage{position:relative;isolation:isolate;width:100%;overflow:hidden;background:var(--ink);height:min(56.25vw,100vh);height:min(56.25vw,100svh)}
+@media (max-width:768px){.screening-stage{height:125vw}}
 .screening-stage picture,.screening-poster{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
 .screening-poster{color:transparent;font-size:0}      /* until the late-loading still arrives, the ink ground shows, not its alt text (screen readers still get it) */
 .screening-canvas{position:absolute;z-index:1;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .6s linear}
@@ -143,17 +143,18 @@ header.site .head-link{display:inline-flex;align-items:center;justify-content:ce
 .screening-video{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
 .screening-stage[data-scene="plain"] .screening-video{inset:0;width:100%;height:100%;opacity:1;object-fit:contain;background:var(--ink)}
 .screening-stage[data-scene="plain"] picture{display:none}
-.screening-projector{position:absolute;z-index:2;left:var(--proj-x,43%);top:var(--proj-y,64%);width:var(--proj-w,14%);height:var(--proj-h,22%);min-width:44px;min-height:44px;
-  margin:0;padding:0;border:0;background:none;color:var(--paper);font:inherit;cursor:pointer}
-.screening-projector:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
-.screening-stage[data-scene="plain"] .screening-projector{left:50%;top:50%;width:auto;height:auto;transform:translate(-50%,-50%)}
-.screening-stage[data-scene="plain"]:not([data-state="off"]) .screening-projector{top:auto;bottom:var(--space-1);transform:translateX(-50%)}
-.screening-hint{position:absolute;left:calc(100% + var(--space-1));top:50%;translate:0 -50%;width:max-content;max-width:9em;text-align:left;padding:var(--space-half) var(--space-1h);
-  background:rgba(29,29,31,.82);border:1px solid var(--color-line);font-family:var(--font-label);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.08em;word-spacing:.14em;
-  animation:roll-hint 2.4s ease-in-out infinite}
-.screening-stage[data-scene="plain"] .screening-hint{position:static;display:inline-block;translate:none}
-.screening-stage:not([data-state="off"]) .screening-hint{opacity:0;animation:none}
-@keyframes roll-hint{50%{opacity:.62}}
+/* the projector is the button: transparent, laid over the projector by projectorButton.js; a ring only for keyboard focus */
+.screening-projector{position:absolute;z-index:2;left:var(--proj-x,40%);top:var(--proj-y,72%);width:var(--proj-w,20%);height:var(--proj-h,28%);min-width:44px;min-height:44px;
+  margin:0;padding:0;border:0;background:none;color:var(--paper);font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.screening-projector:focus{outline:none}
+.screening-projector:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.screening-stage[data-busy="true"] .screening-projector{cursor:progress}
+.screening-plain-label{display:none}
+.screening-stage[data-scene="plain"] .screening-projector{left:50%;top:50%;width:auto;height:auto;transform:translate(-50%,-50%);padding:0 var(--space-3);min-height:48px;
+  background:var(--blue);color:var(--ink);font-family:var(--font-label);text-transform:uppercase;letter-spacing:.06em}
+.screening-stage[data-scene="plain"] .screening-plain-label{display:inline}
+.screening-stage[data-scene="plain"]:not([data-state="idle"]) .screening-projector{top:auto;bottom:var(--space-1);transform:translateX(-50%)}
+.screening-stage[data-scene="plain"] .screening-video{filter:grayscale(1) contrast(1.15)}       /* without the 3D room the film is still black and white */
 .screening-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2);max-width:var(--container);margin:0 auto;padding:var(--space-1) var(--gutter)}
 .screening-controls{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1);flex:1 1 auto}
 .screening-cue{display:inline-flex;align-items:center;min-height:44px;margin-left:auto;padding:0 var(--space-half);text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small);text-decoration:none;border-bottom:1px solid currentColor}

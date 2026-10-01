@@ -112,6 +112,15 @@ PAINT = {
     "darkgreen": ((0.26, 0.34, 0.28), "black"),
     "silver": ((0.70, 0.70, 0.70), "grey"),
     "black": ((0.07, 0.07, 0.08), "black"),
+    # frontman v2 (screening-v2-prompt.md 7-2): greys matched to the black-and-white film
+    "capwhite": ((0.9, 0.9, 0.9), "white"),
+    "shirtwhite": ((0.9, 0.9, 0.9), "white"),
+    "suitgrey": ((0.72, 0.72, 0.72), "grey"),
+    "vestgrey": ((0.6, 0.6, 0.6), "grey"),
+    "inkgrey": ((0.08, 0.08, 0.08), "black"),
+    "skingrey": ((0.78, 0.78, 0.78), "white"),
+    "shoegrey": ((0.3, 0.3, 0.3), "black"),
+    "chrome": ((0.82, 0.82, 0.82), "white"),
 }
 TIERS = {"white": (0.96, 0.95, 0.92), "grey": (0.55, 0.55, 0.55), "black": (0.08, 0.08, 0.09)}
 
@@ -334,6 +343,7 @@ def body_joints(s=1.0, shoulder=0.185, hip=0.095, stance=0.11, arm_angle=40.0, u
         J["palm_" + side] = palm
         J["tip_" + side] = palm + d * 0.095
         J["thumb_" + side] = palm + V((0, -0.06, 0)) + d * 0.015
+        J["index_" + side] = palm + d * 0.085 + V((0, -0.032, 0))
         J["hip_" + side] = V((sx * hip, 0, 0.92))
         J["knee_" + side] = V((sx * stance, -0.03, 0.50))
         J["ankle_" + side] = V((sx * stance * 1.1, 0.025, 0.085))
@@ -344,18 +354,18 @@ def body_joints(s=1.0, shoulder=0.185, hip=0.095, stance=0.11, arm_angle=40.0, u
 
 BASE_RADII = {
     "hips": 0.146, "spine": 0.136, "chest": 0.156, "upper_chest": 0.142, "neck": 0.062, "head": 0.058,
-    "shoulder": 0.076, "elbow": 0.056, "wrist": 0.040, "palm": 0.046, "tip": 0.032, "thumb": 0.021,
+    "shoulder": 0.076, "elbow": 0.056, "wrist": 0.040, "palm": 0.046, "tip": 0.030, "thumb": 0.021, "index": 0.015,
     "hip": 0.112, "knee": 0.075, "ankle": 0.056, "ball": 0.052, "toe": 0.044,
 }       # Skin radii; Subdivision pulls the surface in by about a fifth
 
 SKIN_ORDER = ["hips", "spine", "chest", "upper_chest", "neck", "head"] + [
     part + "_" + side for side in ("L", "R")
-    for part in ("shoulder", "elbow", "wrist", "palm", "tip", "thumb", "hip", "knee", "ankle", "ball", "toe")]
+    for part in ("shoulder", "elbow", "wrist", "palm", "tip", "thumb", "index", "hip", "knee", "ankle", "ball", "toe")]
 
 SKIN_EDGES = [("hips", "spine"), ("spine", "chest"), ("chest", "upper_chest"), ("upper_chest", "neck"), ("neck", "head")] + [
     (a.replace("#", side), b.replace("#", side)) for side in ("L", "R") for a, b in (
         ("upper_chest", "shoulder_#"), ("shoulder_#", "elbow_#"), ("elbow_#", "wrist_#"), ("wrist_#", "palm_#"),
-        ("palm_#", "tip_#"), ("palm_#", "thumb_#"),
+        ("palm_#", "tip_#"), ("palm_#", "thumb_#"), ("palm_#", "index_#"),
         ("hips", "hip_#"), ("hip_#", "knee_#"), ("knee_#", "ankle_#"), ("ankle_#", "ball_#"), ("ball_#", "toe_#"))]
 
 
@@ -421,7 +431,7 @@ def build_head(J, s, mat, width=0.09, jaw=0.22):
 # ---------------------------------------------------------------- rig
 
 VERTICAL = ("hips", "spine", "chest", "neck", "head")
-EULER_BONES = ("cap", "sax_lo", "sax_hi", "bass_spin", "root")
+EULER_BONES = ("cap", "sax_lo", "sax_hi", "bass_spin", "root", "tie", "coat_tail")
 
 
 class Rig:
@@ -948,6 +958,8 @@ def make_character(tag, s=1.0, build=1.0, joints=None, radii=None, head_width=0.
         pick = g["paint"]
         for p in gobj.data.polygons:
             p.material_index = slot[pick(p.center)]
+        if g.get("post"):
+            g["post"](gobj)
         parts.append(gobj)
     head, hc = build_head(J, s, mats["skin"], head_width)
     head.data.materials.clear()
