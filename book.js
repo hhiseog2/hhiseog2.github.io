@@ -51,11 +51,17 @@ async function init() {
   const THREE = await import('./vendor/three.module.min.js');
   await Promise.all([
     document.fonts.load('100px "So What Franklin"'),
+    document.fonts.load('700 100px "So What Bodoni"'),
+    document.fonts.load('500 100px "So What Futura"'),
     document.fonts.ready,
   ]);
 
   const INK = '#1d1d1f', BLUE = '#3d8fe0', PAPER = '#efe6d0';   // style.css --ink / --blue / --paper
-  const FONT = '"So What Franklin", "Franklin Gothic Medium", "Arial Narrow", sans-serif';   // English only, Franklin Gothic Medium only (rq-20261001-36f83e25)
+  // the site's three faces (rq-20261001-30276398, style.css): Franklin for labels, Bodoni for titles, Futura for names
+  const FONT = '"So What Franklin", "Franklin Gothic Medium", "Arial Narrow", sans-serif';
+  const DISPLAY = '700 {px} "So What Bodoni", "Bodoni 72", Didot, serif';
+  const TEXT = '500 {px} "So What Futura", Futura, "Century Gothic", sans-serif';
+  const face = (tpl, px) => tpl.replace('{px}', `${px}px`);
   const W = 1, H = 1.25;              // one page, 4:5 like the panels
   const NX = 48, NZ = 24;             // subdivisions (spine -> edge, top -> bottom)
   const T = 0.0025;                   // one sheet's thickness
@@ -182,9 +188,9 @@ async function init() {
       if (page.kind === 'cover') {
         g.textAlign = 'left'; g.textBaseline = 'alphabetic';
         let fs = 200 * u;
-        g.font = `${fs}px ${FONT}`;
+        g.font = face(DISPLAY, fs);
         fs *= (TEX_W - m * 2) / measureSpaced(g, 'PORTFOLIO', -0.01);   // the title runs the full width
-        g.font = `${fs}px ${FONT}`;
+        g.font = face(DISPLAY, fs);
         spaced(g, 'PORTFOLIO', m, m + fs * 0.74, -0.01);
         const bx = m, by = m + fs * 0.9, bw = TEX_W - m * 2, bh = TEX_H * 0.5;
         g.save(); g.beginPath(); g.rect(bx, by, bw, bh); g.clip();
@@ -254,7 +260,7 @@ async function init() {
     g.strokeRect(px + line / 2, py + line / 2, pw - line, ph - line);
     // caption chip, as on the site: the work's title in its own case (no capitals for names)
     const fs = 14 * u * 1.5;
-    g.font = `${fs}px ${FONT}`;
+    g.font = face(TEXT, fs);   // names in Futura Medium, like .cap
     g.textBaseline = 'middle'; g.textAlign = 'left';
     const text = page.label;
     const tw = measureSpaced(g, text, 0.02);
@@ -273,9 +279,9 @@ async function init() {
     const m = TEX_W * 0.1, right = TEX_W - m;
     g.fillStyle = INK; g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     let fs = 120 * u;
-    g.font = `${fs}px ${FONT}`;
+    g.font = face(DISPLAY, fs);
     fs *= (right - m) / measureSpaced(g, 'CONTENTS', -0.01);   // the title runs the full width, like the cover
-    g.font = `${fs}px ${FONT}`;
+    g.font = face(DISPLAY, fs);
     const top = m + fs * 0.74;
     spaced(g, 'CONTENTS', m, top, -0.01);
     g.fillStyle = BLUE; g.fillRect(m, top + 18 * u, right - m, 6 * u);   // one blue printed rule
@@ -288,7 +294,7 @@ async function init() {
       // one name per row, so the whole entry (number, name, page) sits in the middle of the row
       const o = 14 * u;
       g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, w.no, m, y + 40 * u + o, 0.04);
-      g.font = `${Math.round(38 * u)}px ${FONT}`; spaced(g, w.name, m + 64 * u, y + 44 * u + o, 0);
+      g.font = face(TEXT, Math.round(36 * u)); spaced(g, w.name, m + 64 * u, y + 44 * u + o, 0);
       g.textAlign = 'right';
       g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, `p. ${w.page + 1}`, right, y + 40 * u + o, 0.04);
     });

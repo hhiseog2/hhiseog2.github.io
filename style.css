@@ -2,6 +2,10 @@
    Values that differ from the guide (user requests) are listed in design_target.md under "differences from the guide".
    Mood (rq-20260928-38964c4e): the jazz prints in reference/ — night ink ground, cream paper, one poster blue, big capital titles. */
 @font-face{font-family:"So What Franklin";src:url("fonts/OPTIFranklinGothic-Medium.otf") format("opentype");font-weight:400;font-style:normal;font-display:swap}
+/* rq-20261001-30276398: the user's two other faces, cut down to Latin and the weights used (.superloopy/build_fonts.py). Bodoni 72 is OFL (fonts/Bodoni-OFL.txt); Futura PT under the user's web licence */
+@font-face{font-family:"So What Bodoni";src:url("fonts/bodoni-72-bold.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"So What Futura";src:url("fonts/futura-book.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"So What Futura";src:url("fonts/futura-medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
 
 :root{
   /* compact system (rq-20261001-da14ec6d, design_target.md): the guide's 8px names (--space-1 = 8px …) stay as they are;
@@ -17,9 +21,14 @@
   --dur-ripple:320ms;
   --ease-swing:cubic-bezier(.34,1.56,.64,1);
   --swing-step:40ms;           /* staggered entry: long-short (2:1) steps of this length */
-  /* user request: the Franklin Gothic Medium from the reference folder, every word in English */
-  --font-heading:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
-  --font-body:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;   /* user request (rq-20261001-36f83e25): English only, Franklin Gothic Medium only — no Korean fonts in the stack (the last two are only for when the font file fails) */
+  /* three faces, one job each (rq-20261001-30276398; English only, no Korean fonts in any stack — rq-20261001-36f83e25):
+     Bodoni 72 Bold = titles (the record-sleeve voice), Futura = sentences (Book) and work names (Medium), Franklin Gothic Medium = small capital labels.
+     Hierarchy comes from face, weight and size; the system faces after each are only for when a file fails to load. */
+  --font-display:"So What Bodoni","Bodoni 72",Didot,"Bodoni MT",serif;
+  --font-text:"So What Futura",Futura,"Century Gothic",sans-serif;
+  --font-label:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
+  --font-heading:var(--font-display);
+  --font-body:var(--font-text);
   /* user request (rq-20260929-2ef0a3f5 R5): body text 16px, secondary 14px or more, line height about 1.5 (changed from the guide's 15 / 13 / 1.7) */
   --size-body:16px;
   --size-small:14px;
@@ -49,7 +58,13 @@
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;background:var(--ink);scroll-padding-top:var(--nav-h)}   /* anchors land below the sticky top bar */
-body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-break:keep-all;overflow-wrap:anywhere;word-spacing:.14em;letter-spacing:.01em}  /* this Franklin cut has a narrow space; open it up for lower-case sentences */
+body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-break:keep-all;overflow-wrap:anywhere}
+/* labels: Franklin in small capitals. This Franklin cut has a narrow space, so it is opened up */
+.skip,.marquee,header.site,.credits,.btn,.hero-cue,.scene-toggle,.book-status,.book-toc .toc-now,.book-toc .toc-page,footer.site{font-family:var(--font-label);word-spacing:.14em}
+/* titles: Bodoni 72 Bold, tight and large */
+header.site .logo,.work-title{font-family:var(--font-display);font-weight:700;font-synthesis:none}
+/* the two poster titles stay in Franklin (user request rq-20261001-f29f3f83, see design_target.md) */
+.mega,.contact h2{font-family:var(--font-label);font-weight:400}
 a{color:inherit;text-underline-offset:3px}
 ul,ol{list-style:none;margin:0;padding:0}
 h1,h2,p{margin:0}
@@ -145,13 +160,13 @@ header.site .head-link{display:inline-flex;align-items:center;justify-content:ce
   text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small);text-decoration:none;border-bottom:1px solid currentColor;background:rgba(29,29,31,.78)}
 /* no playback UI on the scene (user request for the film, kept): the pause button shows only when reached by keyboard, like the skip link; tapping the scene also pauses */
 .scene-toggle{position:absolute;top:var(--space-1);right:var(--space-1);min-height:44px;padding:0 var(--space-2);background:var(--ink);color:var(--paper);
-  border:1px solid var(--paper);font:inherit;text-transform:uppercase;font-size:var(--size-small);cursor:pointer}
+  border:1px solid var(--paper);font:inherit;font-family:var(--font-label);text-transform:uppercase;font-size:var(--size-small);cursor:pointer}
 .scene-toggle:not(:focus){top:-80px}                  /* parked above the scene (clipped by .hero) until focused, full 44px like .skip */
 
 /* comic panels and screentones: ink rules on cream paper, tones in ink or blue */
 .panel{position:relative;overflow:hidden;border:var(--ink-line) solid var(--ink);background-color:var(--paper);color:var(--ink);outline:1px solid var(--paper)}
 .cap{position:absolute;left:0;top:0;z-index:1;padding:var(--space-half) var(--space-1);background:var(--paper);color:var(--ink);border-right:var(--ink-line) solid var(--ink);border-bottom:var(--ink-line) solid var(--ink);
-  font-size:var(--size-small);line-height:1.4;letter-spacing:.02em}
+  font-size:var(--size-small);font-weight:500;line-height:1.4;letter-spacing:.02em}
 /* caption at the bottom-left when the artwork has its own lettering in the top-left (Work 04) */
 .cap-bottom>.cap{top:auto;bottom:0;border-bottom:0;border-top:var(--ink-line) solid var(--ink)}
 .cap.plain{position:static;padding:0 0 var(--space-1);border:0;background:none;color:var(--paper)}
@@ -168,7 +183,7 @@ header.site .head-link{display:inline-flex;align-items:center;justify-content:ce
 .work{padding:var(--space-1)}
 .poster-head{max-width:var(--container);margin:0 auto;padding:var(--space-4) var(--gutter) 0} /* the first-screen band above already parts them */
 .poster-head .credits{color:var(--paper-muted);padding-bottom:var(--space-1h);border-bottom:1px solid var(--color-line)}
-.work-title{font-size:var(--size-poster);line-height:.82;font-weight:400;text-transform:uppercase;letter-spacing:-.01em;color:var(--paper);margin-left:-.04em}
+.work-title{font-size:var(--size-poster);line-height:.82;text-transform:uppercase;letter-spacing:-.01em;color:var(--paper);margin-left:-.04em}
 html:not(.book-ready) .poster-head{padding-bottom:var(--space-3)}
 /* works grid — compact cards (rq-20261001-da14ec6d, Discord D-03/D-06): tight 4px gutters, the name stays on the card, a short note
    comes up on hover. On touch screens (no hover) the note always shows, so "hidden" never reads as "none". No empty cell at any width:
@@ -190,7 +205,6 @@ html:not(.book-ready) .poster-head{padding-bottom:var(--space-3)}
   .cap-bottom>.panel-note{translate:0 -100%}
   .panel:hover>.panel-note{opacity:1;translate:0 0}
 }
-}
 
 /* 5. big letter board — ink letters on one-colour blue print (poster) */
 .collage{display:grid;grid-template-columns:1fr}
@@ -198,14 +212,14 @@ html:not(.book-ready) .poster-head{padding-bottom:var(--space-3)}
   padding:var(--space-4) max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter))) var(--space-2)}
 .board::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.22;mix-blend-mode:multiply;pointer-events:none}
 .board > *{position:relative;z-index:1}
-.mega{font-size:clamp(64px, 14vw, 216px);line-height:.86;text-transform:uppercase;font-weight:400;letter-spacing:-.01em}
+.mega{font-size:clamp(64px, 14vw, 216px);line-height:.86;text-transform:uppercase;letter-spacing:-.01em}
 .board .credits{border-top:2px solid var(--ink);padding-top:var(--space-1)}
 .fit{display:inline-block;white-space:nowrap;align-self:flex-start;max-width:none}
 @media (min-width:768px){.mega.fit br{display:none}}
 .board a:focus-visible,.board .btn:focus-visible{outline-color:var(--ink)}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--button-height);padding:0 var(--space-4);background:var(--blue);color:var(--ink);
-  border:2px solid var(--blue);border-radius:var(--button-radius);text-transform:uppercase;letter-spacing:.06em;text-decoration:none;font:inherit;cursor:pointer}
+  border:2px solid var(--blue);border-radius:var(--button-radius);text-transform:uppercase;letter-spacing:.06em;text-decoration:none;font:inherit;font-family:var(--font-label);cursor:pointer}
 .btn.mail{text-transform:none;letter-spacing:.02em}
 /* email + copy: the address stays as still text on the button; the copy result is written next to it (role=status) */
 .mail-row{display:flex;flex-wrap:wrap;gap:var(--space-1)}
@@ -215,7 +229,7 @@ html:not(.book-ready) .poster-head{padding-bottom:var(--space-3)}
 
 /* 7. contact and the link row at the bottom */
 .contact{max-width:var(--container);margin:0 auto;padding:var(--section-y) var(--gutter)}
-.contact h2{font-size:var(--size-mega);line-height:.86;text-transform:uppercase;letter-spacing:-.01em;font-weight:400;margin:0 0 var(--space-2) -.04em}
+.contact h2{font-size:var(--size-mega);line-height:.86;text-transform:uppercase;letter-spacing:-.01em;margin:0 0 var(--space-2) -.04em}
 .contact p{color:var(--paper-muted);margin-bottom:var(--space-3);max-width:32em}
 footer.site{border-top:1px solid var(--color-line);padding:var(--space-2) var(--gutter);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
 footer.site .credits{max-width:var(--container);margin:0 auto}
@@ -239,6 +253,7 @@ footer.site p{color:var(--paper-muted)}
 .book-toc .toc-now{white-space:nowrap;font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
 .book-toc a[aria-current] .toc-now::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;background:currentColor}
 .book-toc .toc-page{color:var(--paper-muted);font-size:var(--size-small)}
+.book-toc .toc-title{font-weight:500}
 .book-toc a[aria-current] .toc-title{text-decoration:underline;text-decoration-thickness:2px}
 .book-hint{color:var(--paper-muted);font-size:var(--size-small)}
 .btn.ghost-ink{background:transparent;color:var(--paper);border:2px solid var(--paper);padding:0 var(--space-3)}
