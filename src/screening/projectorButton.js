@@ -25,7 +25,7 @@ export function createProjectorButton(stage, button) {
     },
     /** lay the button over the object's box, as the camera sees it on a canvas of width x height */
     place(object, camera, width, height) {
-      box.setFromObject(object);
+      box.setFromObject(object, true);
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (let i = 0; i < 8; i++) {
         v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera);

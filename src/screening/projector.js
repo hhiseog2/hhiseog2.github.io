@@ -11,20 +11,32 @@ export async function loadProjector(loader) {
   const root = gltf.scene;
   const need = (name) => { const o = root.getObjectByName(name); if (!o) throw new Error('projector.glb has no "' + name + '"'); return o; };
   const reels = [need('reel_front'), need('reel_rear')];
+  for (const r of reels) r.scale.z *= 3.2;                // full film reels, not thin discs
   const glass = need('lens_glass'), beamOrigin = need('beam_origin');
   const brass = [];
   root.traverse((o) => {
     if (!o.isMesh) return;
     const m = o.material;
-    if (m.name === 'painted_metal') m.color.set(CONFIG.palette.paint);
-    if (m.name === 'brass') { m.color.set(CONFIG.palette.metal); m.emissive = new THREE.Color(CONFIG.palette.paper); m.emissiveIntensity = 0; brass.push(m); }
+    // gunmetal and antique brass (A · Velvet Noir)
+    if (m.name === 'painted_metal') { m.color.set(CONFIG.palette.paint); m.metalness = 0.75; m.roughness = 0.42; }
+    if (m.name === 'brass') { m.color.set(CONFIG.palette.metal); m.metalness = 1; m.roughness = 0.32; m.emissive = new THREE.Color('#ffcf8a'); m.emissiveIntensity = 0; brass.push(m); }
+    m.envMapIntensity = 1.4;
     if (m.aoMap) m.aoMapIntensity = 1.0;
   });
   const glassMesh = glass.isMesh ? glass : glass.children.find((c) => c.isMesh);
   const lens = new THREE.MeshBasicMaterial({ color: 0x222222 });
   if (glassMesh.material && glassMesh.material.dispose) glassMesh.material.dispose();
   glassMesh.material = lens;
-  const warm = new THREE.Color(CONFIG.palette.beam), dark = new THREE.Color(0x202020);
+  const warm = new THREE.Color('#ffd28a'), dark = new THREE.Color(0x1a1612);
+  // a warm glow in front of the lens
+  const glowCanvas = document.createElement('canvas'); glowCanvas.width = glowCanvas.height = 64;
+  const gg = glowCanvas.getContext('2d'), grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,236,200,1)'); grad.addColorStop(0.3, 'rgba(255,200,120,0.5)'); grad.addColorStop(1, 'rgba(255,170,80,0)');
+  gg.fillStyle = grad; gg.fillRect(0, 0, 64, 64);
+  const glowMap = new THREE.CanvasTexture(glowCanvas); glowMap.colorSpace = THREE.SRGBColorSpace;
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowMap, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+  glow.scale.setScalar(0.22);
+  beamOrigin.add(glow);
   let reelAngle = 0;
   const tmp = new THREE.Vector3();
   return {
@@ -34,11 +46,12 @@ export async function loadProjector(loader) {
     /** dt: seconds since the last frame, speed: 0..1 reel speed, lamp: 0..1 lamp brightness,
      *  fx: { hover: 0..1 (brass highlight), twitch: 0..1 (the reels' idle nudge) } */
     update(dt, speed, lamp, fx = {}) {
-      reelAngle += dt * speed * 9.0;
+      reelAngle += dt * speed * 3.2;                        // slow, as a reel really turns
       const twitch = (fx.twitch || 0) * 0.12;
       reels[0].rotation.z = -reelAngle - twitch;
       reels[1].rotation.z = -reelAngle * 1.5 - twitch * 0.7;
       lens.color.copy(dark).lerp(warm, lamp).multiplyScalar(1 + lamp);
+      glow.material.opacity = 0.85 * lamp;
       for (const m of brass) m.emissiveIntensity = 0.22 * (fx.hover || 0);
     },
     dispose() {
@@ -49,7 +62,7 @@ export async function loadProjector(loader) {
         for (const k of ['map', 'aoMap', 'normalMap', 'roughnessMap', 'metalnessMap']) if (m[k] && m[k].dispose) m[k].dispose();
         if (m.dispose) m.dispose();
       });
-      lens.dispose();
+      lens.dispose(); glowMap.dispose(); glow.material.dispose();
       root.removeFromParent();
     },
   };
@@ -76,7 +89,7 @@ export function createBeam() {
   geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geometry.setAttribute('along', new THREE.BufferAttribute(along, 1));
   geometry.setIndex(idx);
-  const uniforms = { uIntensity: { value: 0 }, uTime: { value: 0 }, uColor: { value: new THREE.Color(CONFIG.palette.beam) } };
+  const uniforms = { uIntensity: { value: 0 }, uTime: { value: 0 }, uColor: { value: new THREE.Color('#ffd9a0') } };
   const material = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: /* glsl */`
@@ -94,10 +107,10 @@ export function createBeam() {
       varying float vAlong; varying vec3 vNormalW; varying vec3 vView;
       void main() {
         float facing = abs(dot(normalize(vNormalW), normalize(vView)));
-        float soft = pow(facing, 1.8);                                     // edge-on faces fade: a soft edge
-        float along = mix(1.0, 0.3, vAlong) * smoothstep(0.0, 0.05, vAlong);
-        float flick = 0.92 + 0.08 * sin(uTime * 41.0) * sin(uTime * 23.0);
-        float a = uIntensity * soft * along * 0.42 * flick;
+        float soft = pow(facing, 2.6);                                     // edge-on faces fade: a soft edge
+        float along = mix(1.0, 0.1, pow(vAlong, 0.6)) * smoothstep(0.0, 0.04, vAlong);   // brightest at the lens, thin far out
+        float flick = 0.95 + 0.05 * sin(uTime * 41.0) * sin(uTime * 23.0);
+        float a = uIntensity * soft * along * 0.34 * flick;
         gl_FragColor = vec4(uColor, a);
       }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
@@ -141,7 +154,7 @@ export function createDust(count) {
   const uniforms = {
     uIntensity: { value: 0 }, uTime: { value: 0 }, uScale: { value: 300 },
     uA: { value: [0, 1, 2, 3].map(() => new THREE.Vector3()) }, uB: { value: [0, 1, 2, 3].map(() => new THREE.Vector3()) },
-    uColor: { value: new THREE.Color(CONFIG.palette.beam) },
+    uColor: { value: new THREE.Color('#ffe2b0') },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
@@ -159,7 +172,7 @@ export function createDust(count) {
         vec3 b = mix(mix(uB[0], uB[1], u), mix(uB[3], uB[2], u), w);
         vec4 mv = modelViewMatrix * vec4(mix(a, b, v), 1.0);
         gl_Position = projectionMatrix * mv;
-        gl_PointSize = (0.8 + 1.6 * seed.w) * uScale / -mv.z;
+        gl_PointSize = (0.5 + 1.0 * seed.w) * uScale / -mv.z;
         vLight = (0.35 + 0.65 * abs(sin(uTime * (0.6 + seed.w) + seed.x * 30.0))) * (1.0 - 0.55 * v);
       }`,
     fragmentShader: /* glsl */`

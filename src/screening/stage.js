@@ -1,5 +1,5 @@
 // The stage: no seats, a big screen at the clip's own shape, a dark wall and proscenium round it, a plain floor that fades to
-// black toward the audience, and the projector on a low plinth in the middle. fit() places the camera for the canvas's shape
+// black toward the audience, and the projector on a small wooden slab in the middle. fit() places the camera for the canvas's shape
 // so the screen takes its share of the canvas width with room above it for the frontman, and the projector shows below it.
 //
 // World: the screen's plane is z = 0 (the pop-out's clipping plane), the floor y = 0, the camera looks straight down -z.
@@ -52,13 +52,25 @@ export function createStage() {
   edge(S.W + fw * 2, fw, 0, S.H / 2 + fw / 2); edge(S.W + fw * 2, fw, 0, -S.H / 2 - fw / 2);
   edge(fw, S.H, S.W / 2 + fw / 2, 0); edge(fw, S.H, -S.W / 2 - fw / 2, 0);
   border.position.copy(S.centre);
-  // the projector's plinth (height set in fit)
-  const plinth = new THREE.Mesh(keep(new THREE.BoxGeometry(0.7, 1, 0.7)), keep(new THREE.MeshLambertMaterial({ color: new THREE.Color('#1c1c1e') })));
-  group.add(wall, floor, frame, border, plinth);
+  // a thin antique-brass line inside the proscenium
+  const brassMat = keep(new THREE.MeshStandardMaterial({ color: new THREE.Color(P.brass), metalness: 0.9, roughness: 0.4 }));
+  const line = (w, h, x, y) => { const m = new THREE.Mesh(keep(new THREE.BoxGeometry(w, h, 0.02)), brassMat); m.position.set(x, y, 0.76); frame.add(m); };
+  line(ow + 0.02, 0.025, 0, top + 0.02); line(0.025, top, -ow / 2 - 0.01, top / 2); line(0.025, top, ow / 2 + 0.01, top / 2);
+  // smoke: two large, faint, warm drifts in front of the wall
+  const smokeCanvas = document.createElement('canvas'); smokeCanvas.width = smokeCanvas.height = 128;
+  const sg = smokeCanvas.getContext('2d'), sgr = sg.createRadialGradient(64, 64, 0, 64, 64, 64);
+  sgr.addColorStop(0, 'rgba(255,210,170,0.55)'); sgr.addColorStop(1, 'rgba(255,210,170,0)');
+  sg.fillStyle = sgr; sg.fillRect(0, 0, 128, 128);
+  const smokeMap = keep(new THREE.CanvasTexture(smokeCanvas)); smokeMap.colorSpace = THREE.SRGBColorSpace;
+  const smokeMat = keep(new THREE.SpriteMaterial({ map: smokeMap, transparent: true, depthWrite: false, opacity: 0.1 }));
+  const smoke = [[-1.4, S.centre.y + 0.6, 1.2, 5.5], [1.8, S.centre.y - 0.4, 1.6, 6.5]].map(([x, y, z, sc]) => { const sp = new THREE.Sprite(smokeMat); sp.position.set(x, y, z); sp.scale.set(sc, sc * 0.6, 1); return sp; });
+  // a small, low wooden slab the projector stands on (stained wood, slightly bevelled by its own lighting)
+  const slab = new THREE.Mesh(keep(new THREE.BoxGeometry(1, 1, 1)), keep(new THREE.MeshStandardMaterial({ color: new THREE.Color('#2e180c'), roughness: 0.55, metalness: 0.05 })));
+  group.add(wall, floor, frame, border, slab, ...smoke);
 
   const lookDir = new THREE.Vector3(0, 0, -1);
   return {
-    group, S, wall, floor, frame, border, plinth,
+    group, S, wall, floor, frame, border, smoke, slab,
     /**
      * Camera and projector for a canvas of this shape.
      *   share     screen width as a share of the canvas width (clamped so the screen, the room above it and the projector fit)
@@ -70,7 +82,7 @@ export function createStage() {
       const vfov = mobile ? 46 : 34;
       const tv = Math.tan(THREE.MathUtils.degToRad(vfov / 2)), th = tv * aspect;
       const headroom = st.headroomAbove;
-      const below = mobile ? 0.2 : 0.2;                                      // canvas share kept under the screen for the projector
+      const below = mobile ? 0.3 : 0.26;                                     // canvas share kept under the screen for the projector
       const maxShare = (1 - headroom - below) * SCREENING.clip.aspect / aspect;
       const share = Math.min(mobile ? st.screenWidthOfCanvas.mobile : st.screenWidthOfCanvas.desktop, maxShare);
       const D = S.W / (2 * share * th);                                      // camera distance to the screen plane
@@ -79,18 +91,18 @@ export function createStage() {
       camera.position.set(0, camY, D);
       camera.lookAt(camera.position.clone().add(lookDir));
       camera.updateProjectionMatrix(); camera.updateMatrixWorld();
-      // projector: part way from the camera to the screen, its reels just under the screen's bottom edge on the canvas, and sized
-      // so all of it (reels to base) fits in the band left under the screen
-      const dc = D * (mobile ? 0.42 : 0.5);
+      // projector: near the camera on a small, low wooden slab, whole and centred at the bottom of the canvas, sized so its reels
+      // stay under the screen's bottom edge
       const screenBottomNdc = (S.bottom - camY) / (D * tv);
-      const reelsNdc = screenBottomNdc - (mobile ? 0.1 : 0.05);
-      const reelsY = camY + reelsNdc * dc * tv;
-      const band = (reelsNdc + 1) * dc * tv;                                 // world height from the canvas bottom up to the reels
-      const size = Math.min(CONFIG.projectorSize, band / 0.66);
-      const baseY = Math.max(0.05, reelsY - 0.62 * size);
+      const reelsNdc = screenBottomNdc - (mobile ? 0.05 : 0.03);
+      const baseNdc = mobile ? -0.82 : -0.84;
+      const dc = D * (mobile ? 0.42 : 0.4);
+      const band = (reelsNdc - baseNdc) * dc * tv;                         // world height from its base up to its reels
+      const size = Math.min(CONFIG.projectorSize, band / 0.7);
+      const baseY = camY + baseNdc * dc * tv;
       const projectorAt = new THREE.Vector3(0, baseY, D - dc);
-      this.plinth.scale.set(1, baseY, 1);
-      this.plinth.position.set(0, baseY / 2, D - dc);
+      this.slab.scale.set(size * 0.62, 0.06, size * 0.36);
+      this.slab.position.set(0, baseY - 0.03, D - dc);
       // where the frontman floats for his solo: about 65% up the screen's height, halfway between the screen and the projector,
       // never taller than maxCanvasHeight of the canvas, with his feet above the projector and his head inside the canvas
       const h = SCREENING.popout.hover;

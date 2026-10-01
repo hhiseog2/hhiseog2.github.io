@@ -79,8 +79,9 @@ export function createFilm(renderer, { mobile, video, texture = null, ready = nu
       uniform float uMode, uBright, uTime, uSlip, uSeed, uCue, uShadowOn, uMotion, uBlacks, uWhites, uExposure, uFrame, uGrainT, uFilmOn;
       uniform vec3 uOff, uRipple; uniform vec2 uWeave, uTexel, uRes;
       varying vec2 vUv;
-      float h1(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
-      float h2(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      // hashes without sine: a sin() hash loses precision on phone GPUs and draws diagonal stripes over the whole screen
+      float h1(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+      float h2(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
       float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
       float sampleL(sampler2D t, vec2 uv) { return luma(texture2D(t, uv).rgb); }
       void main() {
@@ -118,7 +119,7 @@ export function createFilm(renderer, { mobile, video, texture = null, ready = nu
         L = mix(uBlacks, uWhites, L);
         // projection: a hot spot in the middle, falling off to the corners
         vec2 c = vUv - 0.5;
-        float spot = 1.06 - 0.42 * dot(c * vec2(1.15, 1.0), c * vec2(1.15, 1.0)) * 2.2;
+        float spot = 1.07 - 0.55 * dot(c * vec2(1.15, 1.0), c * vec2(1.15, 1.0)) * 2.2;
         L *= spot * uExposure;
         // burnt, uneven edges
         float edge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
@@ -128,12 +129,12 @@ export function createFilm(renderer, { mobile, video, texture = null, ready = nu
           // grain: 24 fps, sized to the screen's pixels, strongest in the mid tones
           vec2 gp = floor(vUv * uRes / 1.6);
           float g = h2(gp + uGrainT * 17.0) - 0.5;
-          L += g * 0.16 * (4.0 * L * (1.0 - L) + 0.15);
+          L += g * 0.09 * (4.0 * L * (1.0 - L) + 0.15);                         // a faint grain
           // scratches: 0-2 thin vertical lines, drifting
           for (int i = 0; i < 2; i++) {
             float fi = float(i);
             float bucket = floor(uTime / (0.6 + fi * 0.9) + fi * 3.1);
-            float alive = step(0.55, h1(bucket * 3.7 + fi));
+            float alive = step(0.9, h1(bucket * 3.7 + fi));                         // now and then only
             float x0 = h1(bucket * 9.1 + fi * 2.0) + (uTime - bucket * (0.6 + fi * 0.9)) * (h1(bucket + 4.0) - 0.5) * 0.02;
             float w = (0.6 + h1(bucket * 2.3) * 0.9) * uTexel.x;
             float line = (1.0 - smoothstep(w * 0.5, w * 1.5, abs(vUv.x - fract(x0)))) * alive;
@@ -142,7 +143,7 @@ export function createFilm(renderer, { mobile, video, texture = null, ready = nu
           // dust and hairs: 0-4 a frame, one frame each; now and then a dark blotch
           for (int i = 0; i < 4; i++) {
             float fi = float(i);
-            float on = step(0.5, h1(uFrame * 13.0 + fi * 7.0));
+            float on = step(0.78, h1(uFrame * 13.0 + fi * 7.0));
             vec2 p = vec2(h1(uFrame * 3.1 + fi), h1(uFrame * 5.7 + fi * 3.0));
             vec2 d = (vUv - p) * vec2(4.0 / 3.0, 1.0);
             float r = (0.002 + 0.004 * h1(uFrame + fi * 11.0));
@@ -150,7 +151,7 @@ export function createFilm(renderer, { mobile, video, texture = null, ready = nu
             float hair = (1.0 - smoothstep(0.0006, 0.0014, abs(length(d - vec2(0.012, 0.0)) - 0.012))) * step(0.85, h1(uFrame * 2.0 + fi)) * step(d.x, 0.01);
             L = mix(L, h1(uFrame + fi) > 0.4 ? 0.06 : 0.95, clamp((speck + hair) * on, 0.0, 1.0) * 0.85);
           }
-          float blot = step(0.97, h1(uFrame * 0.77));
+          float blot = step(0.985, h1(uFrame * 0.77));
           vec2 bp = vec2(h1(uFrame * 1.3), h1(uFrame * 2.9));
           L *= 1.0 - blot * (1.0 - smoothstep(0.01, 0.03, length((vUv - bp) * vec2(1.6, 1.0)))) * 0.7;
           // cue dot, top right, 7 s and 1 s before the end
@@ -163,7 +164,8 @@ export function createFilm(renderer, { mobile, video, texture = null, ready = nu
         // the frontman's shadow, when he hangs in the beam
         if (uShadowOn > 0.5) L *= 1.0 - 0.78 * texture2D(uShadow, vUv).r;
         L = clamp(L, 0.0, 1.0);
-        vec3 col = mix(uOff, vec3(L), uBright);
+        vec3 print = L * mix(vec3(0.98, 0.985, 1.0), vec3(1.04, 0.97, 0.86), 0.55);   // silver screen, a slightly sepia print
+        vec3 col = mix(uOff, clamp(print, 0.0, 1.0), uBright);
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,

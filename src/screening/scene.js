@@ -2,11 +2,12 @@
 // first input; until then the section shows a still of the room with the curtain closed.
 //
 // Parts: stage.js (no seats, big screen, camera fit) · curtain.js (red velvet) · sequence.js (the show's state machine) ·
-// filmShader.js (black-and-white projection) · popout.js + toonInk.js (the 3D frontman) · projectorButton.js (the projector is
+// filmShader.js (black-and-white projection) · hologram.js (the frontman as light) · projectorButton.js (the projector is
 // the button) · vintageAudio.js (sound) · projector.js (the machine, its beam, dust and noises) · countdown.js (leader, stand-in).
 //
 // Without WebGL the section falls back to the film in a plain <video> (black and white by CSS) with a visible play button.
 // Reduced motion: black and white with still grain; no flicker, weave, stutter, slip or pop-out; the curtain fades.
+// Look: A · Velvet Noir (the owner's choice of two canvas designs): deep burgundy, antique brass, off-black, warm low-key light.
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from '../../vendor/jsm/loaders/DRACOLoader.js';
@@ -16,8 +17,7 @@ import { createStage } from './stage.js';
 import { createCurtain } from './curtain.js';
 import { createSequence } from './sequence.js';
 import { createFilm } from './filmShader.js';
-import { createInk } from './toonInk.js';
-import { loadFrontman, placeAt, applyPlace, createPuffs } from './popout.js';
+import { loadHologram, placeAt, applyPlace } from './hologram.js';
 import { createProjectorButton } from './projectorButton.js';
 import { createVintageAudio } from './vintageAudio.js';
 import { loadProjector, createBeam, createDust, createSound } from './projector.js';
@@ -152,7 +152,7 @@ export async function activate(section) {
   roomEnv.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   pmrem.dispose();
   scene.environment = envMap;
-  scene.environmentIntensity = 0.12;
+  scene.environmentIntensity = 0.18;
 
   const stage = createStage();
   const S = stage.S;
@@ -169,24 +169,24 @@ export async function activate(section) {
   scene.add(screenMesh);
   const leader = createLeader();
 
-  // light: a dim room, the screen's own light toward the audience, the projector's beam light, a soft key on the projector
-  const ambient = new THREE.AmbientLight(0xffffff, 0.08);
-  const screenLight = new THREE.SpotLight(0xffffff, 0, 30, 1.25, 1.0, 1.4);
+  // light: a dim, warm room — the screen's own light toward the audience, the projector's beam light, a soft warm key on the
+  // projector (low-key: most of the room stays in shadow)
+  const ambient = new THREE.AmbientLight(0xffe2c4, 0.06);
+  const screenLight = new THREE.SpotLight(0xfff2dc, 0, 30, 1.25, 1.0, 1.4);
   screenLight.position.set(0, S.centre.y, 0.05); screenLight.target.position.set(0, S.centre.y - 0.6, 8);
-  const beamSpot = new THREE.SpotLight(0xffffff, 0, 30, 0.3, 0.35, 1.0);
-  const keyLight = new THREE.SpotLight(0xffffff, 30, 14, 0.5, 0.7, 1.0);
-  scene.add(ambient, screenLight, screenLight.target, beamSpot, beamSpot.target, keyLight, keyLight.target);
+  const beamSpot = new THREE.SpotLight(0xffe0b0, 0, 30, 0.3, 0.35, 1.0);
+  const keyLight = new THREE.SpotLight(0xffd6a8, 55, 14, 0.5, 0.7, 1.0);
+  const rimLight = new THREE.DirectionalLight(0xffc98a, 0.9);         // a warm edge on the projector from behind, off the screen
+  scene.add(ambient, screenLight, screenLight.target, beamSpot, beamSpot.target, keyLight, keyLight.target, rimLight, rimLight.target);
 
   // ---------- models ----------
   const draco = new DRACOLoader().setDecoderPath(CONFIG.draco);
   const loader = new GLTFLoader().setDRACOLoader(draco);
-  const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);       // keeps what is in front of the screen
-  const ink = createInk({ film: film.shared, clipPlane });
-  let projector = null, fm = null;
+  let projector = null, holo = null;
   try {
-    [projector, fm] = await Promise.all([
+    [projector, holo] = await Promise.all([
       loadProjector(loader),
-      loadFrontman(loader, ink).catch((e) => { console.warn('screening: no 3D frontman —', e && e.message); return null; }),
+      loadHologram(S).catch((e) => { console.warn('screening: no hologram frontman —', e && e.message); return null; }),
     ]);
   } catch (e) { console.warn('screening: the room could not load —', e && e.message); }
   draco.dispose();
@@ -194,22 +194,36 @@ export async function activate(section) {
   const rig = new THREE.Group();
   rig.add(projector.root);
   scene.add(rig);
-  if (fm) scene.add(fm.holder);
-  const puffs = createPuffs();
-  puffs.sprites.forEach((s) => scene.add(s));
+  if (holo) scene.add(holo.holder, holo.shadow, holo.pool);
   const beam = createBeam();
   const dust = createDust(Math.round(CONFIG.performance.dust * (mobile ? 0.5 : 1)));
   scene.add(beam.mesh, dust.points);
   btn = createProjectorButton(stageEl, button);
 
-  // ---------- the frontman's shadow on the screen: his silhouette seen from the lens, framed to the screen ----------
-  const shadowSize = mobile ? CONFIG.performance.shadowMap.mobile : CONFIG.performance.shadowMap.desktop;
-  const shadowRT = new THREE.WebGLRenderTarget(shadowSize, Math.round(shadowSize / SCREENING.clip.aspect), { depthBuffer: true });
-  const shadowCam = new THREE.PerspectiveCamera();
-  const shadowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  if (fm) fm.holder.traverse((o) => { if (o.isMesh && o.material !== fm.materials[fm.materials.length - 1]) o.layers.enable(2); });
-  shadowCam.layers.set(2);
-  film.uniforms.uShadow.value = shadowRT.texture;
+  // ---------- film grain and a vignette over the whole picture ----------
+  const grade = (() => {
+    const uniforms = { uTime: { value: 0 }, uGrain: { value: mobile ? 0.012 : 0.016 } };     // a faint grain
+    const material = new THREE.ShaderMaterial({
+      uniforms, transparent: true, depthTest: false, depthWrite: false,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: `uniform float uTime, uGrain; varying vec2 vUv;
+        float h2(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+        void main() {
+          vec2 c = vUv - 0.5; float v = smoothstep(0.35, 0.85, length(c * vec2(1.0, 1.2)));
+          float g = h2(floor(gl_FragCoord.xy / 1.5) + uTime * 37.0) - 0.5;
+          // two layers over the picture: the vignette's dark, then the grain over what is left of it
+          float av = v * 0.62, ag = abs(g) * uGrain * 2.0 * (1.0 - av);
+          vec3 c2 = (vec3(0.02, 0.012, 0.008) * av + vec3(g > 0.0 ? 1.0 : 0.0) * ag) / max(av + ag, 1e-4);
+          gl_FragColor = vec4(c2, av + ag);
+        }`,
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+    const mesh = new THREE.Mesh(geo, material); mesh.frustumCulled = false;
+    const sc = new THREE.Scene(); sc.add(mesh);
+    return { scene: sc, camera: new THREE.Camera(), uniforms, dispose() { geo.dispose(); material.dispose(); } };
+  })();
+  renderer.autoClear = false;
 
   // ---------- layout ----------
   let width = 0, height = 0, fit = null;
@@ -220,24 +234,39 @@ export async function activate(section) {
     rig.position.copy(fit.projectorAt);
     rig.scale.setScalar(fit.projectorSize);
     const dy = S.centre.y - (fit.projectorAt.y + 0.212 * fit.projectorSize), dz = -fit.projectorAt.z;
-    rig.rotation.set(0, Math.PI / 2, Math.atan2(dy, -dz) * 0.95, 'YZX');
+    // three-quarter view: turned 35 degrees off the screen axis so the body and both reels read, the lens still tipped up at it
+    rig.rotation.set(0, Math.PI / 2 - 0.62, Math.atan2(dy, -dz) * 0.9, 'YZX');
     scene.updateMatrixWorld(true);
+    // fit what the eye sees (the box from the model's own vertices): whole inside the canvas, under the screen, centred
+    {
+      const rectOf = () => {
+        const b = new THREE.Box3().setFromObject(projector.root, true), pts = [];
+        for (let i = 0; i < 8; i++) { v3.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).project(camera); pts.push([(v3.x * 0.5 + 0.5) * width, (0.5 - v3.y * 0.5) * height]); }
+        return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+      };
+      v3.set(0, S.bottom, 0).project(camera);
+      const screenBottomPx = (0.5 - v3.y * 0.5) * height;
+      const dist = camera.position.z - rig.position.z, tvv = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+      const toWorld = (px) => px / height * 2 * dist * tvv;
+      for (let k = 0; k < 6; k++) {
+        scene.updateMatrixWorld(true);
+        const [x0, y0, x1, y1] = rectOf();
+        rig.position.x -= toWorld((x0 + x1) / 2 - width / 2);
+        if (y1 > height * 0.97) rig.position.y += toWorld(y1 - height * 0.97);
+        else if (y0 < screenBottomPx + 6) { const f = Math.max(0.6, (y1 - screenBottomPx - 6) / (y1 - y0)); rig.scale.multiplyScalar(f); fit.projectorSize *= f; }
+        else break;
+      }
+      fit.projectorAt.copy(rig.position);
+      scene.updateMatrixWorld(true);
+    }
     projector.lens(lens);
     beam.aim(lens, corners);
     dust.aim(beam.corners.from, corners);
     beamSpot.position.copy(lens); beamSpot.target.position.copy(S.centre);
     beamSpot.angle = Math.atan2(Math.hypot(S.W, S.H) / 2, lens.z) * 1.05;
     keyLight.position.set(fit.projectorAt.x + 0.9, fit.projectorAt.y + 3.0, fit.projectorAt.z + 1.8); keyLight.target.position.copy(fit.projectorAt);
-    // shadow camera: at the lens, looking straight at the screen, its frustum exactly the screen
-    shadowCam.position.copy(lens); shadowCam.rotation.set(0, 0, 0); shadowCam.updateMatrixWorld();
-    const n = 0.05, d = lens.z;
-    shadowCam.projectionMatrix.makePerspective((-S.W / 2 - lens.x) * n / d, (S.W / 2 - lens.x) * n / d, (S.top - lens.y) * n / d, (S.bottom - lens.y) * n / d, n, 40);
-    shadowCam.projectionMatrixInverse.copy(shadowCam.projectionMatrix).invert();
+    rimLight.position.set(fit.projectorAt.x - 1.2, fit.projectorAt.y + 2.0, fit.projectorAt.z - 3.0); rimLight.target.position.copy(fit.projectorAt);
     btn.place(projector.root, camera, width, height);
-    ink.uniforms.uRes.value.set(width * renderer.getPixelRatio(), height * renderer.getPixelRatio());
-    // 1.5-2.5 CSS px whatever the distance (the hull is pushed out in clip space)
-    ink.uniforms.uOutlinePx.value = THREE.MathUtils.clamp(1.5 + width / 1280, CONFIG.performance.outlinePx[0], CONFIG.performance.outlinePx[1]) * renderer.getPixelRatio();
-    ink.uniforms.uHatchPx.value = 4.5 * renderer.getPixelRatio();
     const pixels = height * renderer.getPixelRatio() / (2 * fit.tv);
     dust.uniforms.uScale.value = pixels * 0.012;
   }
@@ -286,36 +315,18 @@ export async function activate(section) {
     dust.uniforms.uIntensity.value = lv.beam * exposure; dust.uniforms.uTime.value = clock;
     screenLight.intensity = 22 * lv.bright * film.luminance * exposure;
     beamSpot.intensity = 14 * lv.beam * exposure;
-    keyLight.intensity = 30 * (1 - 0.5 * lv.beam);
-    // the frontman
+    keyLight.intensity = 55 * (1 - 0.4 * lv.beam);
+    rimLight.intensity = 0.6 + 1.2 * lv.bright;
+    // the frontman, as light: lands on the film's stage line, stays on the screen
     const playing = seq.state === 'PLAYING' || seq.state === 'RUNOUT';
-    const place = fm ? placeAt(playing ? t : -1, fit, S, fm, motion) : { visible: false, puffs: [-1, -1], ripple: -1 };
-    if (fm) {
-      applyPlace(fm, place);
-      ink.uniforms.uFilmness.value = place.filmness;
-      ink.uniforms.uRim.value = 0.35 * film.luminance * lv.bright;
-    }
-    const puffSize = S.H * 0.32;
-    puffs.set(0, place.exitPt || v3.set(0, 0, 0), playing ? place.puffs[0] : -1, puffSize);
-    puffs.set(1, place.retPt || v3.set(0, 0, 0), playing ? place.puffs[1] : -1, puffSize * 0.75);
+    const place = holo ? placeAt(playing ? t : -1, holo, S, motion) : { visible: false, ripple: -1 };
+    if (holo) { applyPlace(holo, place, clock); holo.uniforms.uMotion.value = motion ? 1 : 0; }
     film.uniforms.uRipple.value.set(0.5 + P.returnX, 0.97, playing && place.ripple >= 0 ? place.ripple : -1);
-    // his shadow on the film, only while he is out and the beam is on
-    const shadowOn = !!(fm && place.visible && lv.beam > 0.2 && motion);
-    film.uniforms.uShadowOn.value = shadowOn ? 1 : 0;
-    if (shadowOn) {
-      const prevClear = renderer.getClearColor(new THREE.Color()), prevAlpha = renderer.getClearAlpha();
-      renderer.setRenderTarget(shadowRT);
-      renderer.setClearColor(0x000000, 1); renderer.clear();
-      scene.overrideMaterial = shadowMat;
-      const planes = renderer.clippingPlanes; renderer.clippingPlanes = [];
-      renderer.render(scene, shadowCam);
-      renderer.clippingPlanes = planes;
-      scene.overrideMaterial = null;
-      renderer.setRenderTarget(null);
-      renderer.setClearColor(prevClear, prevAlpha);
-    }
     lastPlace = place;
+    renderer.clear();
     renderer.render(scene, camera);
+    grade.uniforms.uTime.value = motion ? Math.floor(clock * 24) : 0;
+    renderer.render(grade.scene, grade.camera);
     stats.frames++;
   }
   function needsLoop() { return alive && visible && !document.hidden && (seq.state !== 'IDLE' || !reduce()); }
@@ -349,9 +360,9 @@ export async function activate(section) {
     document.removeEventListener('visibilitychange', onVisibility);
     reduceMq.removeEventListener('change', onMotion);
     audio.dispose(); sound.dispose();
-    projector.dispose(); if (fm) fm.dispose();
-    [stage, curtain, film, leader, beam, dust, puffs, ink].forEach((x) => x && x.dispose && x.dispose());
-    shadowRT.dispose(); shadowMat.dispose(); envMap.dispose();
+    projector.dispose(); if (holo) holo.dispose();
+    [stage, curtain, film, leader, beam, dust, grade].forEach((x) => x && x.dispose && x.dispose());
+    envMap.dispose();
     renderer.dispose();
     canvas.remove();
   }
@@ -369,9 +380,9 @@ export async function activate(section) {
       fps: Math.round(stats.fps), frames: stats.frames, running: !!raf, visible,
       curtain: lv ? +lv.curtain.toFixed(3) : null, beam: lv ? +lv.beam.toFixed(3) : 0, shownFrame: frameInfo ? frameInfo.frame : null,
       exposure: +film.shared.uExposure.value.toFixed(4), luminance: +film.luminance.toFixed(3), vintage: audio.routed,
-      player: lastPlace ? { visible: lastPlace.visible, phase: lastPlace.phase, filmness: lastPlace.filmness,
-        position: lastPlace.position ? lastPlace.position.toArray().map((x) => +x.toFixed(3)) : null, scale: lastPlace.scale ? +lastPlace.scale.toFixed(3) : null } : null,
-      model: !!fm, seats: SCREENING.stage.seats, seatNames: (() => { let n = 0; scene.traverse((o) => { if (/seat/i.test(o.name)) n++; }); return n; })(),
+      player: lastPlace ? { visible: lastPlace.visible, phase: lastPlace.phase, ground: lastPlace.ground,
+        position: lastPlace.visible ? [lastPlace.x, lastPlace.y, lastPlace.z].map((x) => +x.toFixed(3)) : null, scale: lastPlace.visible ? +lastPlace.sy.toFixed(3) : null } : null,
+      model: !!holo, stageLine: holo ? +holo.stageLine.toFixed(3) : null, seats: SCREENING.stage.seats, seatNames: (() => { let n = 0; scene.traverse((o) => { if (/seat/i.test(o.name)) n++; }); return n; })(),
       fit: fit ? { share: +fit.share.toFixed(3), headroom: fit.headroom } : null, label: button.getAttribute('aria-label'),
     }),
     /** the screen's rectangle on the canvas, in CSS px: [x, y, w, h] */
@@ -380,10 +391,21 @@ export async function activate(section) {
       v3.set(S.W / 2, S.bottom, 0).project(camera); const x1 = (v3.x * 0.5 + 0.5) * width, y1 = (0.5 - v3.y * 0.5) * height;
       return [x0, y0, x1 - x0, y1 - y0];
     },
-    /** where the frontman is on the canvas: [x, y top, y bottom] in CSS px, or null */
+    /** the film's stage line on the canvas, in CSS px */
+    stageLineY() { if (!holo) return null; v3.set(0, holo.stageLine, 0).project(camera); return (0.5 - v3.y * 0.5) * height; },
+    /** the projector's box on the canvas, in CSS px: [x0, y0, x1, y1] */
+    projectorRect() {
+      const b = new THREE.Box3().setFromObject(projector.root, true), pts = [];
+      for (let i = 0; i < 8; i++) { v3.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).project(camera); pts.push([(v3.x * 0.5 + 0.5) * width, (0.5 - v3.y * 0.5) * height]); }
+      return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+    },
+    /** where the frontman is on the canvas: [x0, y0, x1, y1] in CSS px, or null */
     playerRect() {
-      if (!fm || !fm.holder.visible) return null;
-      const b = new THREE.Box3().setFromObject(fm.holder), pts = [];
+      if (!holo || !holo.holder.visible) return null;
+      // the figure itself (its plane less the glow padding)
+      const b = new THREE.Box3().setFromObject(holo.holder), pts = [];
+      const padX = (b.max.x - b.min.x) * 0.18 / 1.36, padY = (b.max.y - b.min.y) * 0.18 / 1.18;
+      b.min.x += padX; b.max.x -= padX; b.max.y -= padY;
       for (let i = 0; i < 8; i++) { v3.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).project(camera); pts.push([(v3.x * 0.5 + 0.5) * width, (0.5 - v3.y * 0.5) * height]); }
       return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
     },
@@ -399,15 +421,11 @@ export async function activate(section) {
   // ---------- show it: everything compiled first (the frontman too, so he never shows as an unlit white shape) ----------
   stageEl.insertBefore(canvas, stageEl.firstChild);
   resize(true);
-  if (fm) { fm.holder.visible = true; fm.holder.position.set(0, S.centre.y, 2); }
-  puffs.sprites.forEach((s) => { s.visible = true; });
-  film.uniforms.uShadowOn.value = 1;
+  if (holo) { holo.holder.visible = holo.shadow.visible = holo.pool.visible = true; holo.uniforms.uOpacity.value = 0.001; }
   await renderer.compileAsync(scene, camera);
   const warm = new THREE.WebGLRenderTarget(64, 64);                         // warm every texture up, off screen
   renderer.setRenderTarget(warm); renderer.render(scene, camera); renderer.setRenderTarget(null); warm.dispose();
-  if (fm) fm.holder.visible = false;
-  puffs.sprites.forEach((s) => { s.visible = false; });
-  film.uniforms.uShadowOn.value = 0;
+  if (holo) holo.holder.visible = holo.shadow.visible = holo.pool.visible = false;
   if (!alive) return api;
   visible = true;
   frame(0);

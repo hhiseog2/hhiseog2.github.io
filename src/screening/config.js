@@ -19,11 +19,11 @@ export const SCREENING = {
     // the clip is 4:3: on a 16:9 desktop canvas 72% would leave no room above the screen or for the projector, so the owner chose
     // about half the width there (2026-10-01). Phones keep the brief's 88%.
     screenWidthOfCanvas: { mobile: 0.88, desktop: 0.50 },
-    headroomAbove: 0.16,
-    canvasAspect: { mobile: [4, 5], desktop: [16, 9] },
+    headroomAbove: 0.1,               // room for the valance (the frontman no longer leaves the screen)
+    canvasAspect: { mobile: [13, 20], desktop: [16, 9] },        // phones: a tall portrait stage (A · Velvet Noir, mobile first)
     mobileBreakpoint: 768,
   },
-  curtain: { initial: 'closed', openSec: 2.0, closeSec: 2.6, fadeSec: 0.6, color: '#6B0C12', sheen: '#c4323c', fringe: '#a8843a' },
+  curtain: { initial: 'closed', openSec: 2.0, closeSec: 2.6, fadeSec: 0.6, color: '#5e0b16', sheen: '#c4505e', fringe: '#c9a14a' },
   film: {
     fps: 12, grainFps: 24,
     holdEvery: [3, 6], holdFrames: [2, 4],
@@ -46,7 +46,8 @@ export const SCREENING = {
 };
 
 export const CONFIG = {
-  models: { projector: site('public/models/projector.glb'), frontman: site('public/models/cartoon/frontman.glb') },
+  models: { projector: site('public/models/projector.glb') },
+  images: { frontman: site('images/screening-frontman.webp') },     // the film's own frontman, cut from the 11.8 s frame
   draco: site('public/draco/'),
   media: (format) => site(SCREENING.clip.src + '.' + format),
   // sequence (seconds)
@@ -55,9 +56,10 @@ export const CONFIG = {
   exitLeap: 0.6, toHover: 0.7, returnDive: 1.1, visibleAfterReturn: 0.15, puff: 0.6, ripple: 0.9,
   // room (metres). The screen is 4 m wide at the clip's shape, its plane is z = 0, the floor y = 0.
   screen: { width: 4.0, bottom: 1.0 },
-  projectorSize: 1.4,
-  palette: { ink: '#1d1d1f', paper: '#efe6d0', wall: '#0c0c0d', floor: '#141415', frame: '#0a0a0b', screenOff: '#2b2b2d', metal: '#cfc6b0', paint: '#2b2b2e' },
-  performance: { maxDpr: 2, dust: 420, outlinePx: [1.5, 2.5], shadowMap: { desktop: 1024, mobile: 512 }, curtainSeg: { desktop: [96, 48], mobile: [64, 32] } },
+  projectorSize: 2.2,
+  // A · Velvet Noir: deep burgundy (curtain), antique brass, off-black, warm monotones
+  palette: { ink: '#1d1d1f', paper: '#efe6d0', wall: '#120c0a', floor: '#2a1a12', frame: '#1a120c', screenOff: '#2a2622', metal: '#b8893a', paint: '#34373c', brass: '#c9a14a' },
+  performance: { maxDpr: 2, dust: 220, outlinePx: [1.5, 2.5], shadowMap: { desktop: 1024, mobile: 512 }, curtainSeg: { desktop: [96, 48], mobile: [64, 32] } },
 };
 
 export const STATUS = {
