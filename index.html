@@ -8,10 +8,8 @@
 <link rel="icon" href="data:,">
 <link rel="preload" href="fonts/OPTIFranklinGothic-Medium.otf" as="font" type="font/otf" crossorigin>
 <link rel="preload" href="fonts/futura-book.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/bodoni-72-bold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" as="image" type="image/webp" media="(max-width:599px)" imagesrcset="images/hologram-poster-site-phone-390.webp 390w, images/hologram-poster-site-phone-780.webp 780w" imagesizes="100vw" fetchpriority="high">
-<link rel="preload" as="image" type="image/webp" media="(min-width:600px) and (max-width:899px)" imagesrcset="images/hologram-poster-site-tablet-768.webp 768w, images/hologram-poster-site-tablet-1536.webp 1536w" imagesizes="100vw" fetchpriority="high">
-<link rel="preload" as="image" type="image/webp" media="(min-width:900px)" imagesrcset="images/hologram-poster-site-wide-960.webp 960w, images/hologram-poster-site-wide-1600.webp 1600w" imagesizes="100vw" fetchpriority="high">
+<link rel="preload" as="image" type="image/webp" media="(max-width:767px)" imagesrcset="images/screening-poster-phone-390.webp 390w, images/screening-poster-phone-780.webp 780w" imagesizes="100vw" fetchpriority="high">
+<link rel="preload" as="image" type="image/webp" media="(min-width:768px)" imagesrcset="images/screening-poster-wide-960.webp 960w, images/screening-poster-wide-1600.webp 1600w" imagesizes="100vw" fetchpriority="high">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <link rel="stylesheet" href="site-style-tokens.css"><link rel="stylesheet" href="style.css">
 </head>
@@ -45,36 +43,35 @@
 </header>
 
 <main id="main">
-  <!-- First screen: a vintage projector casts a hologram of a jazz trio (rq-20260930-409ebb88).
-       It opens on a still picture of that scene. The 3D scene (src/hologram/scene.js + three.js) loads only after the visitor's first
-       input on phones, or at idle time after load on desktop, while this screen is in view (gate script at the end), and its canvas fades in
-       over the still, which is the scene's own first frame.
-       Without WebGL, on a software renderer or a slow machine, the still stays. -->
-  <section class="hero" aria-labelledby="hero-title" data-scene="static">
-    <picture>
-      <source media="(max-width:599px)" type="image/webp" srcset="images/hologram-poster-site-phone-390.webp 390w, images/hologram-poster-site-phone-780.webp 780w" sizes="100vw" width="780" height="820">
-      <source media="(max-width:599px)" srcset="images/hologram-poster-site-phone-390.jpg 390w, images/hologram-poster-site-phone-780.jpg 780w" sizes="100vw" width="780" height="820">
-      <source media="(max-width:899px)" type="image/webp" srcset="images/hologram-poster-site-tablet-768.webp 768w, images/hologram-poster-site-tablet-1536.webp 1536w" sizes="100vw" width="1536" height="1024">
-      <source media="(max-width:899px)" srcset="images/hologram-poster-site-tablet-768.jpg 768w, images/hologram-poster-site-tablet-1536.jpg 1536w" sizes="100vw" width="1536" height="1024">
-      <source type="image/webp" srcset="images/hologram-poster-site-wide-960.webp 960w, images/hologram-poster-site-wide-1600.webp 1600w" sizes="100vw" width="1600" height="615">
-      <img class="hero-poster" src="images/hologram-poster-site-wide-1600.jpg" srcset="images/hologram-poster-site-wide-960.jpg 960w, images/hologram-poster-site-wide-1600.jpg 1600w" sizes="100vw" width="1600" height="615" fetchpriority="high"
-        alt="A vintage film projector casts a hologram of three jazz musicians: a saxophonist, a bassist and a singer.">
-    </picture>
-    <script>
-    // The still is in the site's own colours (the default theme, rq-20261001-36f83e25). ?theme=reggae swaps in the other set
-    // (src/hologram/config.js decides the default for the scene; this decides it for the still).
-    (function(){
-      var m = /[?&]theme=(site|reggae)\b/.exec(location.search), theme = m ? m[1] : 'site', hero = document.querySelector('.hero');
-      hero.dataset.theme = theme;
-      if (theme === 'site') return;
-      hero.querySelectorAll('picture source, picture img').forEach(function(el){
-        ['srcset', 'src'].forEach(function(a){ var v = el.getAttribute(a); if (v) el.setAttribute(a, v.replace(/poster-site-/g, 'poster-' + theme + '-')); });
-      });
-    })();
-    </script>
-    <h1 id="hero-title" class="sr-only">So What, a designer &amp; developer portfolio</h1>
-    <a class="hero-cue" href="#work" data-jazz="pluck">See the work</a>
-    <button class="scene-toggle" type="button" aria-pressed="false" data-jazz="hat" hidden>Pause animation</button>
+  <!-- First screen: the screening room (src/screening/, rq-20261001-49f01b15; in place of the hologram projector, rq-20261001-ede482ab).
+       An old cinema with the projector among the seats. Pressing the projector rolls the owner's cartoon film on the screen, and at its
+       cues the singer jumps out of the screen as a 3D figure and dives back in. It opens on a still picture of the room (the scene's own
+       first frame); the scene, three.js and the models load later (script at the end), the film only when it is played. -->
+  <section id="screening" class="screening" aria-labelledby="screening-title">
+    <h1 class="sr-only">So What, a designer &amp; developer portfolio</h1>
+    <div class="screening-stage" data-state="off" data-scene="static">
+      <picture>
+        <source media="(max-width:767px)" type="image/webp" srcset="images/screening-poster-phone-390.webp 390w, images/screening-poster-phone-780.webp 780w" sizes="100vw" width="780" height="976">
+        <source type="image/webp" srcset="images/screening-poster-wide-960.webp 960w, images/screening-poster-wide-1600.webp 1600w" sizes="100vw" width="1600" height="900">
+        <img class="screening-poster" src="images/screening-poster-wide-1600.jpg" width="1600" height="900" fetchpriority="high" alt="">
+      </picture>
+      <p class="sr-only" id="screening-desc">An old cinema in the dark: a film projector stands among the seats, facing an empty screen. Press the projector to roll a black-and-white cartoon of a jazz trio. The singer jumps out of the screen, sings in the air above the seats, and dives back in. The film has sound.</p>
+      <video class="screening-video" preload="none" playsinline data-poster="images/screening-film-poster.jpg" width="1112" height="834" aria-describedby="screening-desc">
+        <source src="media/seedance.mp4" type="video/mp4">
+      </video>
+      <button class="screening-projector" type="button" aria-label="Play the screening" aria-pressed="false" aria-describedby="screening-desc" data-jazz="stab">
+        <span class="screening-hint" aria-hidden="true">Play the screening</span>
+      </button>
+    </div>
+    <div class="screening-bar">
+      <h2 id="screening-title" class="screening-title">The Screening</h2>
+      <div class="screening-controls">
+        <button class="btn ghost-ink screening-pause" type="button" aria-pressed="false" aria-disabled="true" data-jazz="snap">Pause</button>
+        <button class="btn ghost-ink screening-mute" type="button" aria-pressed="false" data-jazz="snap">Mute</button>
+        <p class="screening-status" role="status"></p>
+      </div>
+      <a class="screening-cue" href="#work" data-jazz="pluck">See the work</a>
+    </div>
   </section>
 
   <section id="work" class="work" aria-labelledby="work-title">
@@ -149,59 +146,37 @@
 </footer>
 
 <script>
-// 3D first screen (rq-20260930-79e8d356, rq-20260930-42db6df6). The still picture is up from the start.
-// When the scene (src/hologram/scene.js, and three.js through it) is fetched:
-// - desktop (wide window, mouse): at idle time after the page has loaded, without waiting for an input — if the visitor has not asked
-//   to save data and the machine reports 4GB of memory or more. A browser that does not report memory waits for an input.
-// - phones, tablets, everything else: after the first real input (tap, click, key, wheel, scroll, or moving a mouse).
-// Either way only while the first screen is mostly in view, the book is not being turned and the tab is visible.
-// The input itself is never held up: the listeners are passive and only set a flag.
-// Reduced motion gets the scene too, as one still frame (the saxophonist at the front).
-// Skipped for the rest of the visit once this visit found no usable WebGL (no GPU, software renderer) or a machine too slow for it.
+// First screen (the screening room): the still is up from the start. The scene (src/screening/scene.js, with three.js and the
+// models) is fetched — never ahead of the first paint:
+// - desktop (wide window, mouse, 4GB of memory or more, not saving data): at idle time after the page has loaded
+// - everything else: after the first real input (tap, click, key, wheel, scroll)
+// Pressing the projector before that fetches it at once and plays as soon as it is ready; the press also lets the film play with
+// sound later (browsers only allow sound that starts from a gesture).
 (function(){
-  var hero = document.querySelector('.hero'), book = document.querySelector('.book');
-  if (!hero || !('IntersectionObserver' in window)) return;
-  var armed = false, asked = false, ratio = 0, known = null;
-  var EV = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll', 'pointermove'];
-  var gate = hero.__gate = { armedAt: 0, askedAt: 0, reason: '' };
-  function arm(how) {
-    if (armed) return;
-    EV.forEach(function(n){ window.removeEventListener(n, onInput, { capture: true }); });
-    // the visit's earlier verdict (no WebGL / software renderer / too slow) is read only when it matters
-    try { known = sessionStorage.getItem('sowhat-hero-gl'); } catch (err) {}
-    if (known) { hero.dataset.sceneWhy = known; return; }
-    armed = true; gate.armedAt = performance.now(); gate.firstInput = how;
-    setTimeout(tryStart, 0);                                                   // after the input has been handled
+  var sec = document.getElementById('screening');
+  if (!sec) return;
+  var loading = null;
+  function load(){
+    if (!loading) loading = import('./src/screening/scene.js').then(function(m){ return m.activate(sec); })
+      .catch(function(e){ sec.querySelector('.screening-stage').dataset.scene = 'plain'; console.warn('screening:', e); });
+    return loading;
   }
-  function onInput(e) {
-    if (e.type === 'pointermove' && e.pointerType !== 'mouse') return;      // a finger resting on the screen is not a choice
-    arm(e.type);
-  }
+  var EV = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'];
+  function onInput(){ EV.forEach(function(n){ window.removeEventListener(n, onInput, { capture: true }); }); setTimeout(load, 0); }
   EV.forEach(function(n){ window.addEventListener(n, onInput, { passive: true, capture: true }); });
   var desktop = window.matchMedia('(min-width: 769px) and (hover: hover) and (pointer: fine)').matches;
   var saving = !!(navigator.connection && navigator.connection.saveData);
-  gate.auto = desktop && !saving && navigator.deviceMemory >= 4;
-  if (/[?&]holo=now\b/.test(location.search)) gate.auto = true;               // for measuring: load as if the visitor had touched the page
-  if (gate.auto) {
-    var idle = function(){ if ('requestIdleCallback' in window) requestIdleCallback(function(){ arm('idle'); }, { timeout: 2000 }); else setTimeout(function(){ arm('idle'); }, 200); };
+  if (desktop && !saving && navigator.deviceMemory >= 4) {
+    var idle = function(){ if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 }); else setTimeout(load, 200); };
     if (document.readyState === 'complete') idle(); else window.addEventListener('load', idle, { once: true });
   }
-  function bookBusy() { return !!(book && book.dataset.state && book.dataset.state !== 'idle'); }
-  function shown() { var r = hero.getBoundingClientRect(); return Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) / Math.max(1, r.height); }
-  function tryStart() {
-    if (!armed || asked || document.hidden || ratio < 0.6) return;
-    if (bookBusy()) { setTimeout(tryStart, 400); return; }                  // the page turn goes first
-    asked = true;
-    // decide at idle time, when a scroll that came with the first input has already moved the page
-    var go = function(){
-      if (shown() < 0.6 || document.hidden || bookBusy()) { asked = false; return; }   // moved on: wait until the first screen is back
-      gate.askedAt = performance.now();
-      import('./src/hologram/scene.js').then(function(m){ return m.activate(); }).catch(function(e){ gate.reason = 'load-failed'; console.warn('hero scene:', e); });
-    };
-    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 1200 }); else setTimeout(go, 150);
-  }
-  new IntersectionObserver(function(es){ ratio = es[es.length - 1].intersectionRatio; tryStart(); }, { threshold: [0, 0.6, 1] }).observe(hero);
-  document.addEventListener('visibilitychange', tryStart);
+  sec.querySelector('.screening-projector').addEventListener('click', function(){
+    if (sec.__screening && !sec.__screening.pending) return;                 // the scene handles it
+    sec.dataset.pending = 'play';
+    var v = sec.querySelector('.screening-video'), p = v.play();
+    if (p && p.then) p.then(function(){ v.pause(); v.currentTime = 0; }).catch(function(){});
+    load();
+  });
 })();
 </script>
 <script type="module" src="book.js"></script>
@@ -292,13 +267,13 @@ window.addEventListener("load", function(){ import("./src/ui/jazz.js"); }, { onc
   if ('IntersectionObserver' in window) {
     var head = document.querySelector('header.site'), dock = document.querySelector('.dock'), contact = document.getElementById('contact');
     new IntersectionObserver(function(es){ head.classList.toggle('is-stuck', !es[es.length - 1].isIntersecting); }).observe(mq);
-    var hero = document.querySelector(".hero");
+    var hero = document.getElementById("screening");                       // the first screen
     if (dock && contact && hero) {
       var heroUp = true, contactUp = false;
       var place = function(){
         var shown = !heroUp && !contactUp;
         dock.dataset.shown = String(shown);
-        if (!shown && dock.contains(document.activeElement)) (contactUp ? contact.querySelector('.btn') : document.querySelector('.hero-cue')).focus();   // never leave focus on a hidden button
+        if (!shown && dock.contains(document.activeElement)) (contactUp ? contact.querySelector('.btn') : document.querySelector('.screening-cue')).focus();   // never leave focus on a hidden button
       };
       new IntersectionObserver(function(es){ heroUp = es[es.length - 1].intersectionRatio >= 0.5; place(); }, { threshold: [0, 0.5, 1] }).observe(hero);
       new IntersectionObserver(function(es){ contactUp = es[es.length - 1].isIntersecting; place(); }, { rootMargin: '0px 0px -80px 0px' }).observe(contact);

@@ -1,0 +1,60 @@
+{
+ "blender": "5.2.1 LTS",
+ "budget": 15000,
+ "models": {
+  "sax": {
+   "triangles": 14398,
+   "bytes": 209224,
+   "materials": [
+    "toon_white",
+    "toon_black",
+    "toon_grey"
+   ],
+   "animations": [
+    "emerge 1.000s",
+    "return 1.000s",
+    "solo 3.000s"
+   ],
+   "extensions": [
+    "KHR_draco_mesh_compression"
+   ],
+   "nodes": 30
+  },
+  "bass": {
+   "triangles": 12064,
+   "bytes": 199252,
+   "materials": [
+    "toon_white",
+    "toon_grey",
+    "toon_black"
+   ],
+   "animations": [
+    "emerge 1.000s",
+    "return 1.000s",
+    "solo 3.000s"
+   ],
+   "extensions": [
+    "KHR_draco_mesh_compression"
+   ],
+   "nodes": 30
+  },
+  "frontman": {
+   "triangles": 12740,
+   "bytes": 207140,
+   "materials": [
+    "toon_white",
+    "toon_grey",
+    "toon_black"
+   ],
+   "animations": [
+    "emerge 1.000s",
+    "return 1.000s",
+    "solo 3.000s"
+   ],
+   "extensions": [
+    "KHR_draco_mesh_compression"
+   ],
+   "nodes": 29
+  }
+ }
+}

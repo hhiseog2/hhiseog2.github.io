@@ -15,7 +15,6 @@
   --row-h:44px;                /* compact list row = the smallest touch target */
   --nav-h:52px;                /* top bar */
   --section-y:64px;            /* space above/below a section (was 96px: -33%) */
-  --hero-band:48px;            /* band under the first screen that holds "See the work" (was 64px) */
   --dur-fast:120ms;
   --dur-base:220ms;
   --dur-ripple:320ms;
@@ -60,7 +59,7 @@
 html{-webkit-text-size-adjust:100%;background:var(--ink);scroll-padding-top:var(--nav-h)}   /* anchors land below the sticky top bar */
 body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-break:keep-all;overflow-wrap:anywhere}
 /* labels: Franklin in small capitals. This Franklin cut has a narrow space, so it is opened up */
-.skip,.marquee,header.site,.credits,.btn,.hero-cue,.scene-toggle,.book-status,.book-toc .toc-now,.book-toc .toc-page,footer.site{font-family:var(--font-label);word-spacing:.14em}
+.skip,.marquee,header.site,.credits,.btn,.screening-cue,.screening-title,.book-status,.book-toc .toc-now,.book-toc .toc-page,footer.site{font-family:var(--font-label);word-spacing:.14em}
 /* titles: Bodoni 72 Bold, tight and large */
 header.site .logo,.work-title{font-family:var(--font-display);font-weight:700;font-synthesis:none}
 /* the two poster titles stay in Franklin (user request rq-20261001-f29f3f83, see design_target.md) */
@@ -128,40 +127,45 @@ header.site .head-link{display:inline-flex;align-items:center;justify-content:ce
 .menu nav a{display:flex;align-items:center;min-height:var(--row-h);padding:0 var(--space-2);text-decoration:none;font-size:var(--size-body)}
 .menu nav a:focus-visible{outline-color:var(--ink);outline-offset:-4px}
 
-/* 3. first screen: a projector casting a hologram of a jazz trio (rq-20260930-409ebb88, src/hologram/scene.js)
-   A still picture of the same scene (.hero-poster) shows first; after the first input the 3D canvas fades in over it in 0.6s.
-   No WebGL, a software renderer, a slow device or a lost context: the still stays.
-   Colours (the user's brief): wall --holo-bg. The hologram teal, amber and three colours are used only inside the 3D scene (src/hologram/config.js).
-   "See the work" sits in the 64px band (padding) below the scene. */
-:root{--holo-bg:var(--ink)}                           /* default = site theme: the site's ink ground (rq-20261001-36f83e25) */
-.hero[data-theme="reggae"]{--holo-bg:#0f1326}        /* ?theme=reggae: the navy wall from the brief (rq-20260930-42db6df6) */
-/* Compact first screen (rq-20261001-da14ec6d): about 80% of the window on desktop and 64% on phones and tablets (band included),
-   so the next section shows below it. The scene keeps a fixed vertical field of view, so a narrower box is exactly the middle of
-   a wider one: each still (images/hologram-poster-*) is rendered at the widest shape its box can take and shown with cover, and the
-   clamps keep each box inside one of the scene's three layouts (src/hologram/scene.js layoutFor: >= 1.55, >= 1.0, below). */
-.hero{position:relative;box-sizing:content-box;width:100%;padding-bottom:var(--hero-band);background:var(--holo-bg);color:var(--paper);overflow:hidden;
-  height:clamp(calc(100vw / 2.6), calc(80vh - var(--marquee-height) - var(--nav-h) - var(--hero-band)), calc(100vw / 1.75));
-  height:clamp(calc(100vw / 2.6), calc(80svh - var(--marquee-height) - var(--nav-h) - var(--hero-band)), calc(100vw / 1.75))}           /* desktop: band + bar + scene = 80% of the window; wide still 2.6:1 */
-@media (max-width:899px){
-  .hero{height:clamp(calc(100vw / 1.5), calc(64vh - var(--hero-band)), calc(100vw / 1.05));
-        height:clamp(calc(100vw / 1.5), calc(64svh - var(--hero-band)), calc(100vw / 1.05))}      /* tablet still: 1.5:1 */
-}
-@media (max-width:599px){
-  .hero{height:max(calc(100vw / .95), calc(64vh - var(--hero-band)));
-        height:max(calc(100vw / .95), calc(64svh - var(--hero-band)))}                             /* phone still: 0.95:1 */
-}
-.hero-poster,.hero-canvas{position:absolute;left:0;top:0;width:100%;height:calc(100% - var(--hero-band));display:block}
-.hero-poster{object-fit:cover}
-/* 3D scene: the canvas covers the still. The canvas takes no scroll or touch */
-.hero-canvas{pointer-events:none;opacity:0;transition:opacity .6s linear}
-.hero[data-scene="3d"] .hero-canvas{opacity:1}
-@media (prefers-reduced-motion:reduce){.hero-canvas{transition:none}}
-.hero-cue{position:absolute;left:50%;bottom:calc((var(--hero-band) - 44px) / 2);transform:translateX(-50%);display:inline-flex;align-items:center;min-height:44px;padding:0 var(--space-2);
-  text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small);text-decoration:none;border-bottom:1px solid currentColor;background:rgba(29,29,31,.78)}
-/* no playback UI on the scene (user request for the film, kept): the pause button shows only when reached by keyboard, like the skip link; tapping the scene also pauses */
-.scene-toggle{position:absolute;top:var(--space-1);right:var(--space-1);min-height:44px;padding:0 var(--space-2);background:var(--ink);color:var(--paper);
-  border:1px solid var(--paper);font:inherit;font-family:var(--font-label);text-transform:uppercase;font-size:var(--size-small);cursor:pointer}
-.scene-toggle:not(:focus){top:-80px}                  /* parked above the scene (clipped by .hero) until focused, full 44px like .skip */
+
+/* 1. first screen: the screening room (src/screening/). A still of the room first, the 3D room fades in over it. The projector is a
+   real button laid over the projector on the canvas (scene.js sets --proj-*; the defaults match the still). Under the picture one bar:
+   the title, Pause and Mute, and "See the work". Desktop: bar + menu + picture = about 80% of the window, so the next section shows. */
+.screening{background:var(--ink)}
+.screening-title{font-weight:400;font-size:var(--size-small);line-height:1.2;text-transform:uppercase;letter-spacing:.08em;color:var(--paper-muted);white-space:nowrap}
+.screening-stage{position:relative;isolation:isolate;width:100%;overflow:hidden;background:var(--ink);
+  height:min(56.25vw,calc(80vh - var(--marquee-height) - var(--nav-h) - 64px));height:min(56.25vw,calc(80svh - var(--marquee-height) - var(--nav-h) - 64px))}
+@media (max-width:767px){.screening-stage{height:125vw}}
+.screening-stage picture,.screening-poster{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
+.screening-poster{color:transparent;font-size:0}      /* until the late-loading still arrives, the ink ground shows, not its alt text (screen readers still get it) */
+.screening-canvas{position:absolute;z-index:1;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .6s linear}
+.screening-stage[data-scene="3d"] .screening-canvas{opacity:1}
+.screening-video{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.screening-stage[data-scene="plain"] .screening-video{inset:0;width:100%;height:100%;opacity:1;object-fit:contain;background:var(--ink)}
+.screening-stage[data-scene="plain"] picture{display:none}
+.screening-projector{position:absolute;z-index:2;left:var(--proj-x,43%);top:var(--proj-y,64%);width:var(--proj-w,14%);height:var(--proj-h,22%);min-width:44px;min-height:44px;
+  margin:0;padding:0;border:0;background:none;color:var(--paper);font:inherit;cursor:pointer}
+.screening-projector:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
+.screening-stage[data-scene="plain"] .screening-projector{left:50%;top:50%;width:auto;height:auto;transform:translate(-50%,-50%)}
+.screening-stage[data-scene="plain"]:not([data-state="off"]) .screening-projector{top:auto;bottom:var(--space-1);transform:translateX(-50%)}
+.screening-hint{position:absolute;left:calc(100% + var(--space-1));top:50%;translate:0 -50%;width:max-content;max-width:9em;text-align:left;padding:var(--space-half) var(--space-1h);
+  background:rgba(29,29,31,.82);border:1px solid var(--color-line);font-family:var(--font-label);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.08em;word-spacing:.14em;
+  animation:roll-hint 2.4s ease-in-out infinite}
+.screening-stage[data-scene="plain"] .screening-hint{position:static;display:inline-block;translate:none}
+.screening-stage:not([data-state="off"]) .screening-hint{opacity:0;animation:none}
+@keyframes roll-hint{50%{opacity:.62}}
+.screening-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2);max-width:var(--container);margin:0 auto;padding:var(--space-1) var(--gutter)}
+.screening-controls{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1);flex:1 1 auto}
+.screening-cue{display:inline-flex;align-items:center;min-height:44px;margin-left:auto;padding:0 var(--space-half);text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small);text-decoration:none;border-bottom:1px solid currentColor}
+.screening-status{flex:1 1 16em;min-height:1.5em;color:var(--paper-muted);font-size:var(--size-small)}
+.btn.ghost-ink[aria-pressed="true"]{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.btn.ghost-ink[aria-pressed="true"]::before{content:"";width:8px;height:8px;margin-right:var(--space-1);background:currentColor}    /* pressed: a square, not colour only */
+/* ?debug=cues */
+.cue-debug{max-width:var(--container);margin:var(--space-2) auto 0;padding:0 var(--gutter);font-size:var(--size-small);font-variant-numeric:tabular-nums}
+.cue-line{position:relative;height:44px;margin:var(--space-1) 0;border:1px solid var(--color-line);cursor:pointer}
+.cue-head{position:absolute;top:0;bottom:0;width:2px;background:var(--paper)}
+.cue-mark{position:absolute;top:0;bottom:0;border-left:2px solid var(--blue);padding-left:4px;line-height:44px;color:var(--blue)}
+.cue-help,.cue-note{color:var(--paper-muted)}
 
 /* comic panels and screentones: ink rules on cream paper, tones in ink or blue */
 .panel{position:relative;overflow:hidden;border:var(--ink-line) solid var(--ink);background-color:var(--paper);color:var(--ink);outline:1px solid var(--paper)}
@@ -308,7 +312,7 @@ html.book-ready .work .panels{display:none}
   .menu nav a:hover{background:var(--blue);color:var(--ink)}
   /* text links: underline (links that already carry a rule get a heavier rule instead) */
   header.site .logo:hover,header.site .head-link:hover,footer.site a:hover,.book-toc a:hover .toc-title{text-decoration:underline}
-  .credits a:hover,.hero-cue:hover{box-shadow:inset 0 -1px 0 currentColor}
+  .credits a:hover,.screening-cue:hover{box-shadow:inset 0 -1px 0 currentColor}
 }
 .btn:not([disabled]):not([aria-disabled="true"]):active,.btn.jz-press:not([disabled]):not([aria-disabled="true"]){background:var(--paper);border-color:var(--paper);color:var(--ink)}
 .btn.ghost:not([disabled]):not([aria-disabled="true"]):active,.btn.ghost.jz-press:not([disabled]):not([aria-disabled="true"]){background:var(--ink);color:var(--blue);border-color:var(--ink)}
