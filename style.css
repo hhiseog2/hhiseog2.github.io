@@ -1,21 +1,34 @@
-/* 이 사이트의 모양. site-style-tokens.css 의 값(var(--...))을 써요. site-style 은 이 파일을 건드리지 않아요.
-   가이드와 다른 값(사용자 요청)은 design_target.md '가이드와 다른 점'에 적었어요.
-   무드(rq-20260928-38964c4e): reference/ 의 재즈 인쇄물 — 밤의 먹 바탕, 크림 종이, 포스터 파랑 한 색, 큰 대문자 제목. */
+/* The look of this site. It uses the values in site-style-tokens.css (var(--...)); site-style never edits this file.
+   Values that differ from the guide (user requests) are listed in design_target.md under "differences from the guide".
+   Mood (rq-20260928-38964c4e): the jazz prints in reference/ — night ink ground, cream paper, one poster blue, big capital titles. */
 @font-face{font-family:"So What Franklin";src:url("fonts/OPTIFranklinGothic-Medium.otf") format("opentype");font-weight:400;font-style:normal;font-display:swap}
 
 :root{
-  /* 사용자 요청: reference 폴더의 Franklin Gothic Medium, 모든 글자 영어 */
-  --font-heading:"So What Franklin","Franklin Gothic Medium","Arial Narrow","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --font-body:"So What Franklin","Franklin Gothic Medium","Arial Narrow","Apple SD Gothic Neo","Malgun Gothic",sans-serif;   /* 한글 이름은 가이드의 한글 글꼴로 */
-  /* 사용자 요청(rq-20260929-2ef0a3f5 R5): 읽어야 하는 글은 본문 16px · 보조 14px 이상, 설명 행간 약 1.5 (가이드 15 · 13 · 1.7 에서 바꿈) */
+  /* compact system (rq-20261001-da14ec6d, design_target.md): the guide's 8px names (--space-1 = 8px …) stay as they are;
+     the brief's in-between steps, row and bar heights and motion are added under their own names. Corners stay 0 (guide). */
+  --space-half:4px;
+  --space-1h:12px;
+  --row-h:44px;                /* compact list row = the smallest touch target */
+  --nav-h:52px;                /* top bar */
+  --section-y:64px;            /* space above/below a section (was 96px: -33%) */
+  --hero-band:48px;            /* band under the first screen that holds "See the work" (was 64px) */
+  --dur-fast:120ms;
+  --dur-base:220ms;
+  --dur-ripple:320ms;
+  --ease-swing:cubic-bezier(.34,1.56,.64,1);
+  --swing-step:40ms;           /* staggered entry: long-short (2:1) steps of this length */
+  /* user request: the Franklin Gothic Medium from the reference folder, every word in English */
+  --font-heading:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;
+  --font-body:"So What Franklin","Franklin Gothic Medium","Arial Narrow",sans-serif;   /* user request (rq-20261001-36f83e25): English only, Franklin Gothic Medium only — no Korean fonts in the stack (the last two are only for when the font file fails) */
+  /* user request (rq-20260929-2ef0a3f5 R5): body text 16px, secondary 14px or more, line height about 1.5 (changed from the guide's 15 / 13 / 1.7) */
   --size-body:16px;
   --size-small:14px;
   --line-body:1.5;
-  /* 사용자 선택: 인쇄색 = 포스터 파랑, 바탕 = 밤(먹 바탕 + 크림 글자) */
-  --ink:#1d1d1f;               /* 먹: 바탕·만화 선 */
-  --paper:#efe6d0;             /* 크림 종이: 글자·만화 종이 (먹 위 13.5:1) */
-  --paper-muted:#b9b09c;       /* 흐린 크림: 보조 글자 (먹 위 7.8:1) */
-  --blue:#3d8fe0;              /* 포스터 파랑: 강조 (먹 위 4.97:1, 파랑 위 먹 글자 4.97:1) */
+  /* user choice: print colour = poster blue, ground = night (ink ground + cream text) */
+  --ink:#1d1d1f;               /* ink: ground and comic lines */
+  --paper:#efe6d0;             /* cream paper: text and comic paper (13.5:1 on ink) */
+  --paper-muted:#b9b09c;       /* muted cream: secondary text (7.8:1 on ink) */
+  --blue:#3d8fe0;              /* poster blue: accent (4.97:1 on ink, ink text on blue 4.97:1) */
   --color-bg:var(--ink);
   --color-surface:var(--ink);
   --color-text:var(--paper);
@@ -26,16 +39,16 @@
   --color-button:var(--blue);
   --color-on-button:var(--ink);
   --color-button-border:var(--blue);
-  --ink-line:3px;              /* 만화 칸 먹선 */
+  --ink-line:3px;              /* ink rule around comic panels */
   --marquee-height:48px;
-  --size-mega:clamp(45px, 8vw, 128px);          /* 포스터식 큰 제목 */
-  --size-poster:clamp(80px, 25vw, 320px);       /* 섹션 제목: 폭을 채우는 대문자 */
-  /* 인쇄 질감: 아주 약한 종이 결(모든 브라우저에서 같은 SVG 노이즈) */
+  --size-mega:clamp(45px, 8vw, 128px);          /* poster-style big title */
+  --size-poster:clamp(80px, 25vw, 320px);       /* section title: capitals that fill the width */
+  /* print texture: a very faint paper grain (the same SVG noise in every browser) */
   --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;background:var(--ink)}
+html{-webkit-text-size-adjust:100%;background:var(--ink);scroll-padding-top:var(--nav-h)}   /* anchors land below the sticky top bar */
 body{margin:0;background:var(--ink);color:var(--paper);font:400 var(--size-body)/var(--line-body) var(--font-body);font-synthesis:none;overflow-x:hidden;word-break:keep-all;overflow-wrap:anywhere;word-spacing:.14em;letter-spacing:.01em}  /* this Franklin cut has a narrow space; open it up for lower-case sentences */
 a{color:inherit;text-underline-offset:3px}
 ul,ol{list-style:none;margin:0;padding:0}
@@ -46,13 +59,13 @@ h1,h2,p{margin:0}
 .skip:focus{top:8px}
 .skip:focus-visible{outline-color:var(--paper)}
 
-/* 포스터 아래쪽 정보처럼: 작은 대문자를 여러 칸으로 */
+/* like the small print at the foot of a poster: small capitals in several columns */
 .credits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-1) var(--space-3);font-size:var(--size-small);line-height:1.35;text-transform:uppercase;letter-spacing:.06em}
 .credits > *{min-width:0}
 .credits a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;border-bottom:1px solid currentColor;align-self:start}
 @media (max-width:600px){.credits{grid-template-columns:1fr 1fr}.credits > :first-child{grid-column:1/-1}}
 
-/* 1. 위에 흐르는 띠 — 파랑 인쇄 위 먹 글자 */
+/* 1. scrolling band at the top — ink letters on blue print */
 .marquee{position:relative;display:flex;align-items:center;height:var(--marquee-height);background:var(--blue);color:var(--ink);overflow:hidden;
   text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small)}
 .marquee-track{display:flex;flex:none;white-space:nowrap;animation:marquee var(--marquee-duration,40s) linear infinite;will-change:transform}
@@ -63,12 +76,30 @@ h1,h2,p{margin:0}
 .marquee-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:-5px}
 @keyframes marquee{to{transform:translateX(-50%)}}
 
-/* 2. 첫 화면 위에 겹친 메뉴 — 메뉴 왼쪽 · 로고 가운데 · 링크 오른쪽 */
-header.site{position:relative;z-index:5;height:64px;background:var(--ink);color:var(--paper);border-bottom:1px solid var(--color-line)}
-header.site > *{position:absolute;top:var(--space-1);display:inline-flex;align-items:center;min-height:48px;color:var(--paper);text-decoration:none;text-transform:uppercase;letter-spacing:.06em}
+/* 2. menu over the first screen — menu left, logo centre, link right */
+/* 52px bar that stays at the top once the band has scrolled away; then its ground turns see-through ink with a blur (Apple-style
+   translucency, no new colour). Solid ink where blur is not supported or the visitor asks for less transparency. */
+header.site{position:sticky;top:0;z-index:5;height:var(--nav-h);background:var(--ink);color:var(--paper);border-bottom:1px solid var(--color-line);
+  transition:background-color var(--dur-base) ease}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  header.site.is-stuck{background:rgba(29,29,31,.8);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4)}
+}
+@media (prefers-reduced-transparency:reduce){header.site.is-stuck{background:var(--ink);-webkit-backdrop-filter:none;backdrop-filter:none}}
+header.site > *{position:absolute;top:calc((var(--nav-h) - 48px) / 2 - 1px);display:inline-flex;align-items:center;min-height:48px;color:var(--paper);text-decoration:none;text-transform:uppercase;letter-spacing:.06em}
 header.site .menu{left:var(--gutter)}
 header.site .logo{left:50%;transform:translateX(-50%);font-size:var(--size-h3);letter-spacing:.08em}
-header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center;font-size:var(--size-small)}
+header.site .head-actions{right:var(--gutter);gap:var(--space-half)}
+header.site .head-link{display:inline-flex;align-items:center;justify-content:center;min-height:var(--row-h);min-width:44px;padding:0 var(--space-half);color:inherit;text-decoration:none;font-size:var(--size-small)}
+/* sound toggle: the speaker shows sound waves when on and a cross when off (shape, not colour), plus aria-pressed */
+.sound-toggle{display:inline-flex;align-items:center;gap:var(--space-half);min-height:var(--row-h);min-width:44px;padding:0 var(--space-1);margin:0;
+  background:none;border:0;color:inherit;font:inherit;font-size:var(--size-small);text-transform:inherit;letter-spacing:inherit;cursor:pointer}
+.sound-toggle svg{flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.sound-toggle .s-body{fill:currentColor}
+.sound-toggle[aria-pressed="true"] .s-off,.sound-toggle[aria-pressed="false"] .s-on{display:none}
+@media (max-width:599px){
+  .sound-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  header.site .head-link{display:none}                 /* phones: Contact is the docked button at the bottom (and in the menu) */
+}
 .menu summary{list-style:none;display:inline-flex;align-items:center;gap:var(--space-1);min-height:48px;min-width:48px;cursor:pointer;font-size:var(--size-small)}
 .menu summary::-webkit-details-marker{display:none}
 .menu .bars,.menu .bars::before,.menu .bars::after{display:block;width:24px;height:2px;background:currentColor}
@@ -79,32 +110,47 @@ header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center
 .menu[open] .bars::before{top:0;transform:rotate(45deg)}
 .menu[open] .bars::after{top:0;transform:rotate(-45deg)}
 .menu nav{position:absolute;left:0;top:100%;min-width:220px;background:var(--paper);color:var(--ink);border:var(--ink-line) solid var(--ink)}
-.menu nav a{display:flex;align-items:center;min-height:48px;padding:0 var(--space-2);text-decoration:none;font-size:var(--size-body)}
+.menu nav a{display:flex;align-items:center;min-height:var(--row-h);padding:0 var(--space-2);text-decoration:none;font-size:var(--size-body)}
 .menu nav a:focus-visible{outline-color:var(--ink);outline-offset:-4px}
 
-/* 3. 첫 화면: 16:9 필름 영상 자리 — 비어 있는 동안은 포스터의 선 스크린만 아주 약하게 */
-/* the film's title card fills its whole 16:9 frame down to the credit line, so See the work sits in an ink strip under the film (padding) instead of over the text */
-.hero{position:relative;display:grid;place-items:center;box-sizing:content-box;width:100%;aspect-ratio:16/9;padding-bottom:var(--space-6);background:var(--ink);color:var(--paper);overflow:hidden}
-.hero-media,.hero-video,.hero-seam,.hero-tint{position:absolute;inset:0 0 var(--space-6);width:100%;height:auto;object-fit:cover}
-.hero-video,.hero-seam{pointer-events:none}                      /* no browser menu or double-tap fullscreen on the film */
-.hero-seam{opacity:0;transition:opacity 42ms linear}            /* first frame: loop seam, loading cover, poster when blocked (index.html) */
-.hero-video::-webkit-media-controls,.hero-video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
-.hero-media{background:repeating-radial-gradient(circle at 50% 58%,rgba(61,143,224,.16) 0 1px,transparent 1px 7px)}
-.hero-media::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.18;mix-blend-mode:overlay}
-/* the film: warm colours removed, deep blacks, soft highlights, a faint cool blue in the greys, fine grain */
-.hero-video,.hero-seam{filter:grayscale(1) contrast(1.22) brightness(.9)}
-.hero-tint{background:var(--blue);mix-blend-mode:color;opacity:.22;pointer-events:none}
-.hero-tint::after{content:"";position:absolute;inset:0;background:var(--grain);background-size:160px 160px;opacity:.28;mix-blend-mode:overlay}
-.hero-cue{position:absolute;left:50%;bottom:var(--space-1);transform:translateX(-50%);display:inline-flex;align-items:center;min-height:44px;padding:0 var(--space-2);
+/* 3. first screen: a projector casting a hologram of a jazz trio (rq-20260930-409ebb88, src/hologram/scene.js)
+   A still picture of the same scene (.hero-poster) shows first; after the first input the 3D canvas fades in over it in 0.6s.
+   No WebGL, a software renderer, a slow device or a lost context: the still stays.
+   Colours (the user's brief): wall --holo-bg. The hologram teal, amber and three colours are used only inside the 3D scene (src/hologram/config.js).
+   "See the work" sits in the 64px band (padding) below the scene. */
+:root{--holo-bg:var(--ink)}                           /* default = site theme: the site's ink ground (rq-20261001-36f83e25) */
+.hero[data-theme="reggae"]{--holo-bg:#0f1326}        /* ?theme=reggae: the navy wall from the brief (rq-20260930-42db6df6) */
+/* Compact first screen (rq-20261001-da14ec6d): about 80% of the window on desktop and 64% on phones and tablets (band included),
+   so the next section shows below it. The scene keeps a fixed vertical field of view, so a narrower box is exactly the middle of
+   a wider one: each still (images/hologram-poster-*) is rendered at the widest shape its box can take and shown with cover, and the
+   clamps keep each box inside one of the scene's three layouts (src/hologram/scene.js layoutFor: >= 1.55, >= 1.0, below). */
+.hero{position:relative;box-sizing:content-box;width:100%;padding-bottom:var(--hero-band);background:var(--holo-bg);color:var(--paper);overflow:hidden;
+  height:clamp(calc(100vw / 2.6), calc(80vh - var(--marquee-height) - var(--nav-h) - var(--hero-band)), calc(100vw / 1.75));
+  height:clamp(calc(100vw / 2.6), calc(80svh - var(--marquee-height) - var(--nav-h) - var(--hero-band)), calc(100vw / 1.75))}           /* desktop: band + bar + scene = 80% of the window; wide still 2.6:1 */
+@media (max-width:899px){
+  .hero{height:clamp(calc(100vw / 1.5), calc(64vh - var(--hero-band)), calc(100vw / 1.05));
+        height:clamp(calc(100vw / 1.5), calc(64svh - var(--hero-band)), calc(100vw / 1.05))}      /* tablet still: 1.5:1 */
+}
+@media (max-width:599px){
+  .hero{height:max(calc(100vw / .95), calc(64vh - var(--hero-band)));
+        height:max(calc(100vw / .95), calc(64svh - var(--hero-band)))}                             /* phone still: 0.95:1 */
+}
+.hero-poster,.hero-canvas{position:absolute;left:0;top:0;width:100%;height:calc(100% - var(--hero-band));display:block}
+.hero-poster{object-fit:cover}
+/* 3D scene: the canvas covers the still. The canvas takes no scroll or touch */
+.hero-canvas{pointer-events:none;opacity:0;transition:opacity .6s linear}
+.hero[data-scene="3d"] .hero-canvas{opacity:1}
+@media (prefers-reduced-motion:reduce){.hero-canvas{transition:none}}
+.hero-cue{position:absolute;left:50%;bottom:calc((var(--hero-band) - 44px) / 2);transform:translateX(-50%);display:inline-flex;align-items:center;min-height:44px;padding:0 var(--space-2);
   text-transform:uppercase;letter-spacing:.06em;font-size:var(--size-small);text-decoration:none;border-bottom:1px solid currentColor;background:rgba(29,29,31,.78)}
-/* no playback UI on the film (user request): the pause button shows only when reached by keyboard, like the skip link; tapping the banner also pauses */
-.video-toggle{position:absolute;top:var(--space-1);right:var(--space-1);min-height:44px;padding:0 var(--space-2);background:var(--ink);color:var(--paper);
+/* no playback UI on the scene (user request for the film, kept): the pause button shows only when reached by keyboard, like the skip link; tapping the scene also pauses */
+.scene-toggle{position:absolute;top:var(--space-1);right:var(--space-1);min-height:44px;padding:0 var(--space-2);background:var(--ink);color:var(--paper);
   border:1px solid var(--paper);font:inherit;text-transform:uppercase;font-size:var(--size-small);cursor:pointer}
-.video-toggle:not(:focus){top:-80px}                  /* parked above the banner (clipped by .hero) until focused, full 44px like .skip */
+.scene-toggle:not(:focus){top:-80px}                  /* parked above the scene (clipped by .hero) until focused, full 44px like .skip */
 
-/* 만화 칸 · 스크린톤: 크림 종이 위 먹선, 톤은 먹 또는 파랑 */
+/* comic panels and screentones: ink rules on cream paper, tones in ink or blue */
 .panel{position:relative;overflow:hidden;border:var(--ink-line) solid var(--ink);background-color:var(--paper);color:var(--ink);outline:1px solid var(--paper)}
-.cap{position:absolute;left:0;top:0;z-index:1;padding:4px var(--space-1);background:var(--paper);color:var(--ink);border-right:var(--ink-line) solid var(--ink);border-bottom:var(--ink-line) solid var(--ink);
+.cap{position:absolute;left:0;top:0;z-index:1;padding:var(--space-half) var(--space-1);background:var(--paper);color:var(--ink);border-right:var(--ink-line) solid var(--ink);border-bottom:var(--ink-line) solid var(--ink);
   font-size:var(--size-small);line-height:1.4;letter-spacing:.02em}
 /* caption at the bottom-left when the artwork has its own lettering in the top-left (Work 04) */
 .cap-bottom>.cap{top:auto;bottom:0;border-bottom:0;border-top:var(--ink-line) solid var(--ink)}
@@ -118,20 +164,38 @@ header.site .head-link{right:var(--gutter);min-width:44px;justify-content:center
 .tone-lines{background-image:repeating-conic-gradient(from 0deg at 50% 55%,var(--ink) 0 .6deg,transparent .6deg 5deg)}
 .tone-key{display:grid;place-items:center;background-image:radial-gradient(var(--blue) 1.2px,transparent 1.7px);background-size:10px 10px}
 
-/* 4. 작업 — 포스터처럼: 작은 정보 줄 위, 폭을 채우는 큰 제목 */
+/* 4. work — like a poster: a small line of info above, a big title that fills the width */
 .work{padding:var(--space-1)}
-.poster-head{max-width:var(--container);margin:0 auto;padding:var(--space-7) var(--gutter) 0}
-.poster-head .credits{color:var(--paper-muted);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-line)}
+.poster-head{max-width:var(--container);margin:0 auto;padding:var(--space-4) var(--gutter) 0} /* the first-screen band above already parts them */
+.poster-head .credits{color:var(--paper-muted);padding-bottom:var(--space-1h);border-bottom:1px solid var(--color-line)}
 .work-title{font-size:var(--size-poster);line-height:.82;font-weight:400;text-transform:uppercase;letter-spacing:-.01em;color:var(--paper);margin-left:-.04em}
-html:not(.book-ready) .poster-head{padding-bottom:var(--space-4)}
-.panels{display:grid;grid-template-columns:1fr;gap:var(--space-1)}
+html:not(.book-ready) .poster-head{padding-bottom:var(--space-3)}
+/* works grid — compact cards (rq-20261001-da14ec6d, Discord D-03/D-06): tight 4px gutters, the name stays on the card, a short note
+   comes up on hover. On touch screens (no hover) the note always shows, so "hidden" never reads as "none". No empty cell at any width:
+   phones and tablets 2 columns with the third work across both (16:10, shown whole), desktop all five in one row. */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-half)}
 .panel.tall{aspect-ratio:4/5}
-@media (min-width:768px){.panels{grid-template-columns:1fr 1fr}}
+.panels>.panel:nth-child(3){grid-column:1/-1;aspect-ratio:16/10}
+.panels>.panel:nth-child(3)>img{object-fit:contain}
+@media (min-width:1100px){
+  .panels{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .panels>.panel:nth-child(3){grid-column:auto;aspect-ratio:4/5}
+  .panels>.panel:nth-child(3)>img{object-fit:cover}
+}
+.panel-note{position:absolute;left:0;right:0;bottom:0;z-index:1;margin:0;padding:var(--space-half) var(--space-1);background:var(--ink);color:var(--paper);
+  font-size:var(--size-small);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:var(--ink-line) solid var(--ink)}
+.cap-bottom>.panel-note{bottom:auto;top:0;border-top:0;border-bottom:var(--ink-line) solid var(--ink)}
+@media (hover:hover){
+  .panel-note{opacity:0;translate:0 100%;transition:opacity var(--dur-base) ease,translate var(--dur-base) var(--ease-swing)}
+  .cap-bottom>.panel-note{translate:0 -100%}
+  .panel:hover>.panel-note{opacity:1;translate:0 0}
+}
+}
 
-/* 5. 큰 글자 판 — 파랑 한 색 인쇄 위 먹 글자(포스터) */
+/* 5. big letter board — ink letters on one-colour blue print (poster) */
 .collage{display:grid;grid-template-columns:1fr}
-.board{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--space-5);min-height:clamp(360px,42vw,520px);background:var(--blue);color:var(--ink);overflow:hidden;
-  padding:var(--space-5) max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter))) var(--space-3)}
+.board{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--space-4);min-height:clamp(256px,30vw,360px);background:var(--blue);color:var(--ink);overflow:hidden;
+  padding:var(--space-4) max(var(--gutter),calc((100% - var(--container)) / 2 + var(--gutter))) var(--space-2)}
 .board::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.22;mix-blend-mode:multiply;pointer-events:none}
 .board > *{position:relative;z-index:1}
 .mega{font-size:clamp(64px, 14vw, 216px);line-height:.86;text-transform:uppercase;font-weight:400;letter-spacing:-.01em}
@@ -149,29 +213,29 @@ html:not(.book-ready) .poster-head{padding-bottom:var(--space-4)}
 .copy-status{margin-top:var(--space-1);min-height:1.5em;color:var(--paper);max-width:40em}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink);align-self:flex-start}
 
-/* 7. 연락 · 아래 링크 줄 */
-.contact{max-width:var(--container);margin:0 auto;padding:var(--space-section) var(--gutter)}
-.contact h2{font-size:var(--size-mega);line-height:.86;text-transform:uppercase;letter-spacing:-.01em;font-weight:400;margin:0 0 var(--space-3) -.04em}
-.contact p{color:var(--paper-muted);margin-bottom:var(--space-4);max-width:32em}
-footer.site{border-top:1px solid var(--color-line);padding:var(--space-3) var(--gutter);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
+/* 7. contact and the link row at the bottom */
+.contact{max-width:var(--container);margin:0 auto;padding:var(--section-y) var(--gutter)}
+.contact h2{font-size:var(--size-mega);line-height:.86;text-transform:uppercase;letter-spacing:-.01em;font-weight:400;margin:0 0 var(--space-2) -.04em}
+.contact p{color:var(--paper-muted);margin-bottom:var(--space-3);max-width:32em}
+footer.site{border-top:1px solid var(--color-line);padding:var(--space-2) var(--gutter);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
 footer.site .credits{max-width:var(--container);margin:0 auto}
 footer.site ul{display:flex;flex-wrap:wrap;gap:0 var(--space-3)}
 footer.site a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;text-decoration:none}
 footer.site p{color:var(--paper-muted)}
 
-/* 3D 만화책 (book.js 가 준비되면 html.book-ready) */
-.book{padding:0 0 var(--space-5)}
+/* 3D comic book (html.book-ready once book.js is ready) */
+.book{padding:0 0 var(--space-4)}
 /* the canvas keeps room above the book for a page standing up; that room slides up behind the title */
-.book-stage{position:relative;max-width:var(--container);margin:calc(var(--space-3) - var(--book-head,0px)) auto 0;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.book-stage{position:relative;max-width:var(--container);margin:calc(var(--space-2) - var(--book-head,0px)) auto 0;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .book-stage:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
 .book-stage canvas{display:block}
-.book-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-2);max-width:var(--container);margin:var(--space-3) auto 0;padding:var(--space-2) var(--gutter) 0;border-top:1px solid var(--color-line)}
+.book-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-1h);max-width:var(--container);margin:var(--space-2) auto 0;padding:var(--space-1h) var(--gutter) 0;border-top:1px solid var(--color-line)}
 .book-info{display:flex;flex-direction:column;align-items:center;gap:var(--space-1);text-align:center}
 .book-status{letter-spacing:.02em}
 /* contents: the same works list, opens the chosen work at once. The open work is marked by a shape and a word, not colour only */
 .book-toc{grid-column:1/-1}
 .book-toc ol{max-width:640px;margin:0 auto;border-top:1px solid var(--color-line)}
-.book-toc a{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:var(--space-1);min-height:48px;padding:var(--space-1) 0;border-bottom:1px solid var(--color-line);text-decoration:none}
+.book-toc a{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:var(--space-1);min-height:var(--row-h);padding:var(--space-half) 0;border-bottom:1px solid var(--color-line);text-decoration:none}
 .book-toc .toc-now{white-space:nowrap;font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
 .book-toc a[aria-current] .toc-now::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;background:currentColor}
 .book-toc .toc-page{color:var(--paper-muted);font-size:var(--size-small)}
@@ -187,10 +251,40 @@ footer.site p{color:var(--paper-muted)}
 @media (max-width:600px){.book-bar{grid-template-columns:1fr 1fr}.book-info{grid-column:1/-1;grid-row:1}.book-bar .btn.ghost-ink{padding:0 var(--space-1);white-space:nowrap}.book-toc a{grid-template-columns:72px 1fr auto}}
 html.book-ready .work .panels{display:none}
 
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* phones: the one main action docked at the bottom (Toss P-01). Hidden while the contact section itself is on screen, so there is
+   never a second filled button in view; the page gets room underneath so the dock never covers the last lines. */
+.dock{display:none}
+@media (max-width:599px){
+  body{padding-bottom:calc(var(--button-height) + 2 * var(--space-1) + env(safe-area-inset-bottom))}
+  .dock{display:block;position:fixed;left:0;right:0;bottom:0;z-index:6;padding:var(--space-1) var(--gutter) calc(var(--space-1) + env(safe-area-inset-bottom));
+    background:var(--ink);border-top:1px solid var(--color-line);transition:translate var(--dur-base) var(--ease-swing),visibility 0s}
+  .dock[data-shown="false"]{translate:0 110%;visibility:hidden;transition:translate var(--dur-base) ease,visibility 0s var(--dur-base)}
+  .dock-cta{display:flex;width:100%}
+}
 
-/* 상호작용 상태 — 역할별로 한 곳에 (표: design_target.md 'hover 규칙'). 모양·크기는 바뀌지 않고 색·선만 바뀌어 레이아웃이 흔들리지 않아요.
-   hover 는 마우스처럼 hover 할 수 있는 기기에서만 — 터치 뒤에 hover 모양이 선택된 것처럼 남지 않게. 누르는 동안(:active)은 모든 기기에서 같은 반응. */
+/* jazz click feedback (src/ui/jazz.js, data-jazz = snap / pluck / stab / hat). The individual "scale" property is used so it adds to
+   any transform an element already has (the logo and the cue are centred with a transform). */
+[data-jazz]{-webkit-tap-highlight-color:transparent}
+.jz-press{scale:.96;transition:scale var(--dur-fast) ease-out}
+.jz-release{animation:jz-swing var(--dur-base) var(--ease-swing)}
+@keyframes jz-swing{from{scale:.96}to{scale:1}}
+/* record grooves: thin rings from the point pressed, drawn in a layer over the page so no element's layout changes */
+.jz-layer{position:fixed;inset:0;z-index:30;pointer-events:none;overflow:hidden}
+.jz-ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border:1px solid var(--jz-color,var(--color-accent));border-radius:50%;opacity:0;
+  animation:jz-ring var(--dur-ripple) cubic-bezier(.2,.7,.3,1) both}
+@keyframes jz-ring{from{scale:.15;opacity:.9}to{scale:1;opacity:0}}
+/* where the surface is the accent blue, the rings are ink */
+.btn:not(.ghost):not(.ghost-ink),.marquee,.board{--jz-color:var(--ink)}
+/* staggered entry, long-short like a swung eighth (delays set by jazz.js) */
+.jz-in{animation:jz-enter var(--dur-base) var(--ease-swing) both;animation-delay:var(--jz-delay,0ms)}
+@keyframes jz-enter{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* with reduced motion the band starts still; if the visitor presses it to play, it really plays (the button said so) */
+@media (prefers-reduced-motion:reduce){.marquee[data-state="playing"] .marquee-track{animation:marquee var(--marquee-duration,40s) linear infinite!important}}
+
+/* interaction states — one place per role (table: design_target.md "hover rules"). Shape and size never change, only colour and rules, so the layout does not move.
+   hover only on devices that can hover, like a mouse, so a hover look does not stick after a tap as if selected. While pressed (:active) every device reacts the same. */
 @media (hover:hover){
   /* buttons: the fill inverts on its own surface */
   .btn:not([disabled]):not([aria-disabled="true"]):hover{background:var(--paper);border-color:var(--paper);color:var(--ink)}
@@ -201,6 +295,13 @@ html.book-ready .work .panels{display:none}
   header.site .logo:hover,header.site .head-link:hover,footer.site a:hover,.book-toc a:hover .toc-title{text-decoration:underline}
   .credits a:hover,.hero-cue:hover{box-shadow:inset 0 -1px 0 currentColor}
 }
-.btn:not([disabled]):not([aria-disabled="true"]):active{background:var(--paper);border-color:var(--paper);color:var(--ink)}
-.btn.ghost:not([disabled]):not([aria-disabled="true"]):active{background:var(--ink);color:var(--blue);border-color:var(--ink)}
+.btn:not([disabled]):not([aria-disabled="true"]):active,.btn.jz-press:not([disabled]):not([aria-disabled="true"]){background:var(--paper);border-color:var(--paper);color:var(--ink)}
+.btn.ghost:not([disabled]):not([aria-disabled="true"]):active,.btn.ghost.jz-press:not([disabled]):not([aria-disabled="true"]){background:var(--ink);color:var(--blue);border-color:var(--ink)}
+.jz-press:is(a:not(.btn),summary,.sound-toggle,.scene-toggle){color:var(--blue)}
+.menu nav a.jz-press{background:var(--blue);color:var(--ink)}
+.board a.jz-press:not(.btn){color:inherit;box-shadow:inset 0 -2px 0 currentColor}       /* blue surface: a heavier rule instead of blue text */
+@media (prefers-reduced-motion:reduce){.jz-press{scale:none}.jz-layer{display:none}}
 .menu nav a:active{background:var(--blue);color:var(--ink)}
+
+/* when the visitor turns on "increase contrast" (Apple HIG Color / Accessibility: offer higher contrast) — muted cream text becomes the normal cream. No new colour */
+@media (prefers-contrast: more){:root{--paper-muted:var(--paper);--color-muted:var(--paper)}}

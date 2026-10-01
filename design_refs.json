@@ -1,0 +1,14 @@
+[
+  {
+    "component": "Reduced motion and pause for the first-screen hologram scene (src/hologram/scene.js)",
+    "pattern_ids": ["apple-reduce-motion-01", "discord-motion-contrast-settings-01", "apple-motion-optional-01"],
+    "reason": "With reduced motion there is no carousel, parallax, dolly or glitch: one frame with the saxophonist at the front. It follows the setting if it changes during the visit. The looping motion can be stopped by pressing the first screen or with a button reachable by keyboard, and nothing is drawn off screen or in a hidden tab. Motion is decoration, so the title and links are all there without it.",
+    "requirement_ids": ["R5"]
+  },
+  {
+    "component": "First-screen states (still picture, primitive fallback, pause button)",
+    "pattern_ids": ["apple-feedback-status-01", "apple-color-not-alone-01"],
+    "reason": "While loading and without WebGL, a still picture of the same scene shows (no loading animation). If a model file fails, only that player falls back to primitives. The pause state is told by the button text (Pause/Play animation) and aria-pressed, never by colour alone.",
+    "requirement_ids": ["R5", "R1"]
+  }
+]

@@ -8,27 +8,40 @@
 const book = document.querySelector('.book');
 const stage = book && book.querySelector('.book-stage');
 
-if (book && stage && hasWebGL()) {
-  let started = false;
+// (rq-20260930-42db6df6 B-3) The book now waits for the first input on phones too, where it is part of the first screen: building it
+// there without an input cost about 1.4s of blocked main thread on a mid-range phone. Until then the works show as the plain grid.
+// Before that: (rq-20260930-79e8d356) at once if it is already on screen (phones: part of the first screen); otherwise once
+// it comes within 400px of the screen *after* the visitor's first input — so a page that is only being looked at does not fetch and
+// build three.js for a book further down. The WebGL test itself also waits until then.
+if (book && stage) {
+  let started = false, near = false, inView = false, touched = false;
   const start = () => {
-    if (started) return;
+    if (started || !touched || !(inView || near)) return;
     started = true;
-    init().catch(() => { /* keep the static grid */ });
+    if (!hasWebGL()) return;                              // keep the static grid
+    const run = () => init().catch(() => { /* keep the static grid */ });
+    if (inView) run(); else (window.requestIdleCallback || ((f) => setTimeout(f, 200)))(run, { timeout: 1500 });   // below the fold: at idle time, after the input
   };
   if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) { io.disconnect(); start(); }
-    }, { rootMargin: '400px 0px' });
-    io.observe(document.getElementById('work'));
+    const EV = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll', 'pointermove'];
+    const onInput = () => { touched = true; EV.forEach((n) => window.removeEventListener(n, onInput, { capture: true })); setTimeout(start, 0); };
+    EV.forEach((n) => window.addEventListener(n, onInput, { passive: true, capture: true }));
+    const work = document.getElementById('work');
+    new IntersectionObserver((es) => { near = es[es.length - 1].isIntersecting; start(); }, { rootMargin: '400px 0px' }).observe(work);
+    new IntersectionObserver((es) => { inView = es[es.length - 1].isIntersecting; start(); }).observe(work);
   } else {
-    start();
+    inView = true; start();
   }
 }
 
 function hasWebGL() {
   try {
     const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    // give the test context back at once (it used to stay alive next to the two real ones until garbage collection)
+    const lose = gl && gl.getExtension('WEBGL_lose_context');
+    if (lose) lose.loseContext();
+    return !!gl;
   } catch (e) {
     return false;
   }
@@ -42,7 +55,7 @@ async function init() {
   ]);
 
   const INK = '#1d1d1f', BLUE = '#3d8fe0', PAPER = '#efe6d0';   // style.css --ink / --blue / --paper
-  const FONT = '"So What Franklin", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';   // Franklin for Latin, the guide's Korean fonts for 한글
+  const FONT = '"So What Franklin", "Franklin Gothic Medium", "Arial Narrow", sans-serif';   // English only, Franklin Gothic Medium only (rq-20261001-36f83e25)
   const W = 1, H = 1.25;              // one page, 4:5 like the panels
   const NX = 48, NZ = 24;             // subdivisions (spine -> edge, top -> bottom)
   const T = 0.0025;                   // one sheet's thickness
@@ -50,10 +63,10 @@ async function init() {
 
   // ---------- pages from the works list ----------
   const works = [...document.querySelectorAll('.panels .panel')].map((el) => {
-    const label = el.querySelector('.cap').textContent.trim();          // "01. Bill Evans — 빌 에반스"
-    const m = label.match(/^(\d+)\.\s*(.+?)\s*—\s*(.+)$/) || [null, '', label, ''];
+    const label = el.querySelector('.cap').textContent.trim();          // "01. Bill Evans": English only, one name per work
+    const m = label.match(/^(\d+)\.\s*(.+)$/) || [null, '', label];
     return {
-      kind: 'panel', id: el.id, label, no: m[1], name: m[2], nameKo: m[3],
+      kind: 'panel', id: el.id, label, no: m[1], name: m[2],
       tone: [...el.classList].find((c) => c.startsWith('tone-')),
       capBottom: el.classList.contains('cap-bottom'),
       art: el.querySelector('img') ? el.querySelector('img').currentSrc || el.querySelector('img').src : '',
@@ -80,6 +93,14 @@ async function init() {
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;   // shadows are redrawn only when the paper moves
   const canvas = renderer.domElement;
+  // lost context (driver reset, GPU memory): keep the page alive, then draw again when the browser hands the context back.
+  // three.js rebuilds its GPU state on restore; the page textures are re-uploaded from their canvases.
+  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); book.dataset.gl = 'lost'; });
+  canvas.addEventListener('webglcontextrestored', () => {
+    book.dataset.gl = 'restored';
+    textures.forEach((t) => { t.needsUpdate = true; });
+    resize();
+  });
   canvas.setAttribute('aria-hidden', 'true');
   stage.appendChild(canvas);
 
@@ -127,7 +148,10 @@ async function init() {
   });
 
   // ---------- textures ----------
-  const TEX_W = (window.devicePixelRatio || 1) > 1.5 ? 1024 : 768;
+  // page texture width: enough for the page as drawn (the renderer caps the pixel ratio at 2). Phones show one page ~300 CSS px wide,
+  // at most ~600 device px, so 768 is already sharper than the screen; 1024 there only added upload, mipmap work and GPU memory
+  // (rq-20260930-79e8d356).
+  const TEX_W = (window.devicePixelRatio || 1) > 1.5 && stage.clientWidth >= 600 ? 1024 : 768;
   const TEX_H = Math.round(TEX_W * H / W);
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const textures = new Map();
@@ -261,11 +285,12 @@ async function init() {
       const y = top + 60 * u + row * i;
       g.fillRect(m, y, right - m, Math.max(1, 1.5 * u));                // ink line between entries
       g.textAlign = 'left';
-      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, w.no, m, y + 40 * u, 0.04);
-      g.font = `${Math.round(38 * u)}px ${FONT}`; spaced(g, w.name, m + 64 * u, y + 44 * u, 0);
-      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, w.nameKo, m + 64 * u, y + 78 * u, 0);
+      // one name per row, so the whole entry (number, name, page) sits in the middle of the row
+      const o = 14 * u;
+      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, w.no, m, y + 40 * u + o, 0.04);
+      g.font = `${Math.round(38 * u)}px ${FONT}`; spaced(g, w.name, m + 64 * u, y + 44 * u + o, 0);
       g.textAlign = 'right';
-      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, `p. ${w.page + 1}`, right, y + 40 * u, 0.04);
+      g.font = `${Math.round(22 * u)}px ${FONT}`; spaced(g, `p. ${w.page + 1}`, right, y + 40 * u + o, 0.04);
     });
   }
 
@@ -616,16 +641,26 @@ async function init() {
     return [2 * k - 1, 2 * k];
   }
 
+  // a page's label as text
+  function setLabel(el, page) {
+    el.textContent = page.label;
+  }
+
   // ---------- status + buttons ----------
   const status = book.querySelector('.book-status');
   const prev = book.querySelector('.book-prev'), next = book.querySelector('.book-next');
   const total = pages.length;
   function announce() {
     const vis = visiblePages();
-    let text;
-    if (vis.length === 1) text = `${pages[vis[0]].label}, page ${vis[0] + 1} of ${total}`;
-    else text = `Pages ${vis[0] + 1} and ${vis[1] + 1} of ${total}: ${pages[vis[0]].label} / ${pages[vis[1]].label}`;
-    status.textContent = text;
+    const parts = vis.length === 1
+      ? [pages[vis[0]], `, page ${vis[0] + 1} of ${total}`]
+      : [`Pages ${vis[0] + 1} and ${vis[1] + 1} of ${total}: `, pages[vis[0]], ' / ', pages[vis[1]]];
+    const frag = document.createDocumentFragment();
+    for (const x of parts) {
+      if (typeof x === 'string') frag.append(x);
+      else { const s = document.createElement('span'); setLabel(s, x); frag.append(...s.childNodes); }
+    }
+    status.replaceChildren(frag);
     book.dataset.spread = String(k);
     // at the first/last page the button stays focusable (a real `disabled` drops keyboard focus to <body>) and only says it can't be used
     setUsable(prev, k > 0);
@@ -654,8 +689,9 @@ async function init() {
     const a = document.createElement('a');
     a.href = `#${w.id}`;
     a.dataset.page = String(w.page);
+    a.dataset.jazz = 'pluck';                                            // click feedback (src/ui/jazz.js)
     a.innerHTML = '<span class="toc-now" aria-hidden="true"></span><span class="toc-title"></span><span class="toc-page"></span>';
-    a.querySelector('.toc-title').textContent = w.label;
+    setLabel(a.querySelector('.toc-title'), w);
     a.querySelector('.toc-page').textContent = `p. ${w.page + 1}`;
     li.appendChild(a);
     tocList.appendChild(li);

@@ -7,13 +7,17 @@
 <meta name="description" content="So What: a jazz comics portfolio for a designer and developer.">
 <link rel="icon" href="data:,">
 <link rel="preload" href="fonts/OPTIFranklinGothic-Medium.otf" as="font" type="font/otf" crossorigin>
+<link rel="preload" as="image" type="image/webp" media="(max-width:599px)" imagesrcset="images/hologram-poster-site-phone-390.webp 390w, images/hologram-poster-site-phone-780.webp 780w" imagesizes="100vw" fetchpriority="high">
+<link rel="preload" as="image" type="image/webp" media="(min-width:600px) and (max-width:899px)" imagesrcset="images/hologram-poster-site-tablet-768.webp 768w, images/hologram-poster-site-tablet-1536.webp 1536w" imagesizes="100vw" fetchpriority="high">
+<link rel="preload" as="image" type="image/webp" media="(min-width:900px)" imagesrcset="images/hologram-poster-site-wide-960.webp 960w, images/hologram-poster-site-wide-1600.webp 1600w" imagesizes="100vw" fetchpriority="high">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <link rel="stylesheet" href="site-style-tokens.css"><link rel="stylesheet" href="style.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <div class="marquee" data-state="playing">
-  <button class="marquee-toggle" type="button" aria-pressed="false" aria-describedby="marquee-hint">
+  <button class="marquee-toggle" type="button" aria-pressed="false" aria-describedby="marquee-hint" data-jazz="hat">
     <span class="marquee-track"><span>A designer &amp; developer portfolio / drawn in ink, played in blue / </span><span aria-hidden="true">A designer &amp; developer portfolio / drawn in ink, played in blue / </span><span aria-hidden="true">A designer &amp; developer portfolio / drawn in ink, played in blue / </span><span aria-hidden="true">A designer &amp; developer portfolio / drawn in ink, played in blue / </span></span>
   </button>
   <p id="marquee-hint" class="sr-only">Press to pause the scrolling text.</p>
@@ -21,29 +25,54 @@
 
 <header class="site">
   <details class="menu">
-    <summary><span class="bars" aria-hidden="true"></span><span class="menu-label">Menu</span></summary>
+    <summary data-jazz="hat"><span class="bars" aria-hidden="true"></span><span class="menu-label">Menu</span></summary>
     <nav aria-label="Main menu"><ul>
-      <li><a href="#work">Work</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="#work" data-jazz="pluck">Work</a></li>
+      <li><a href="#contact" data-jazz="pluck">Contact</a></li>
     </ul></nav>
   </details>
-  <a class="logo" href="#main">So What</a>
-  <a class="head-link" href="#contact">Contact</a>
+  <a class="logo" href="#main" data-jazz="pluck">So What</a>
+  <div class="head-actions">
+    <!-- click sounds: off by default, the choice is kept in this browser (src/ui/jazz.js). On/off is shown by the icon's shape and aria-pressed -->
+    <button class="sound-toggle" type="button" aria-pressed="false" data-jazz="hat">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path class="s-body" d="M3 9h4l5-4v14l-5-4H3z"/><path class="s-on" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/><path class="s-off" d="M16 9l6 6M22 9l-6 6"/></svg>
+      <span class="sound-label">Sound</span>
+    </button>
+    <a class="head-link" href="#contact" data-jazz="pluck">Contact</a>
+  </div>
 </header>
 
 <main id="main">
-  <!-- First screen: the user's film (media/, left unchanged). The black-and-white cool-blue look and grain are drawn by style.css.
-       hero-seam is the film's first frame: it covers the video while it loads, if autoplay is blocked, and fades in over the last
-       half second so the end dissolves into the opening title card instead of jumping back to it. -->
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="hero-media" data-video-slot></div>
-    <video class="hero-video" src="media/so-what-trumpet-title.mp4" poster="images/hero-poster.jpg" width="1280" height="720" autoplay muted loop playsinline preload="auto"
-      disablepictureinpicture disableremoteplayback aria-hidden="true" tabindex="-1"></video>
-    <img class="hero-seam" src="images/hero-poster.jpg" width="1280" height="720" alt="" fetchpriority="high">
-    <div class="hero-tint" aria-hidden="true"></div>
+  <!-- First screen: a vintage projector casts a hologram of a jazz trio (rq-20260930-409ebb88).
+       It opens on a still picture of that scene. The 3D scene (src/hologram/scene.js + three.js) loads only after the visitor's first
+       input on phones, or at idle time after load on desktop, while this screen is in view (gate script at the end), and its canvas fades in
+       over the still, which is the scene's own first frame.
+       Without WebGL, on a software renderer or a slow machine, the still stays. -->
+  <section class="hero" aria-labelledby="hero-title" data-scene="static">
+    <picture>
+      <source media="(max-width:599px)" type="image/webp" srcset="images/hologram-poster-site-phone-390.webp 390w, images/hologram-poster-site-phone-780.webp 780w" sizes="100vw" width="780" height="820">
+      <source media="(max-width:599px)" srcset="images/hologram-poster-site-phone-390.jpg 390w, images/hologram-poster-site-phone-780.jpg 780w" sizes="100vw" width="780" height="820">
+      <source media="(max-width:899px)" type="image/webp" srcset="images/hologram-poster-site-tablet-768.webp 768w, images/hologram-poster-site-tablet-1536.webp 1536w" sizes="100vw" width="1536" height="1024">
+      <source media="(max-width:899px)" srcset="images/hologram-poster-site-tablet-768.jpg 768w, images/hologram-poster-site-tablet-1536.jpg 1536w" sizes="100vw" width="1536" height="1024">
+      <source type="image/webp" srcset="images/hologram-poster-site-wide-960.webp 960w, images/hologram-poster-site-wide-1600.webp 1600w" sizes="100vw" width="1600" height="615">
+      <img class="hero-poster" src="images/hologram-poster-site-wide-1600.jpg" srcset="images/hologram-poster-site-wide-960.jpg 960w, images/hologram-poster-site-wide-1600.jpg 1600w" sizes="100vw" width="1600" height="615" fetchpriority="high"
+        alt="A vintage film projector casts a hologram of three jazz musicians: a saxophonist, a bassist and a singer.">
+    </picture>
+    <script>
+    // The still is in the site's own colours (the default theme, rq-20261001-36f83e25). ?theme=reggae swaps in the other set
+    // (src/hologram/config.js decides the default for the scene; this decides it for the still).
+    (function(){
+      var m = /[?&]theme=(site|reggae)\b/.exec(location.search), theme = m ? m[1] : 'site', hero = document.querySelector('.hero');
+      hero.dataset.theme = theme;
+      if (theme === 'site') return;
+      hero.querySelectorAll('picture source, picture img').forEach(function(el){
+        ['srcset', 'src'].forEach(function(a){ var v = el.getAttribute(a); if (v) el.setAttribute(a, v.replace(/poster-site-/g, 'poster-' + theme + '-')); });
+      });
+    })();
+    </script>
     <h1 id="hero-title" class="sr-only">So What, a designer &amp; developer portfolio</h1>
-    <a class="hero-cue" href="#work">See the work</a>
-    <button class="video-toggle" type="button" aria-pressed="false" hidden>Pause video</button>
+    <a class="hero-cue" href="#work" data-jazz="pluck">See the work</a>
+    <button class="scene-toggle" type="button" aria-pressed="false" data-jazz="hat" hidden>Pause animation</button>
   </section>
 
   <section id="work" class="work" aria-labelledby="work-title">
@@ -60,33 +89,33 @@
     <div class="book" hidden>
       <div class="book-stage" tabindex="0" role="group" aria-roledescription="comic book" aria-label="Comic book. Drag a page corner, or use the left and right arrow keys, to turn pages."></div>
       <div class="book-bar">
-        <button class="btn ghost-ink book-prev" type="button">Previous page</button>
+        <button class="btn ghost-ink book-prev" type="button" data-jazz="snap">Previous page</button>
         <div class="book-info">
-          <button class="btn ghost-ink book-toc-toggle" type="button" aria-expanded="false" aria-controls="book-toc">Contents</button>
+          <button class="btn ghost-ink book-toc-toggle" type="button" data-jazz="hat" aria-expanded="false" aria-controls="book-toc">Contents</button>
           <p class="book-status" aria-live="polite"></p>
           <p class="book-hint">Drag a page corner to turn it</p>
         </div>
-        <button class="btn ghost-ink book-next" type="button">Next page</button>
+        <button class="btn ghost-ink book-next" type="button" data-jazz="snap">Next page</button>
         <nav class="book-toc" id="book-toc" aria-label="Contents" hidden><ol></ol></nav>
       </div>
     </div>
     <!-- The works, in book order. id = link target (#work-01 …), .cap = the title shown in the book, the contents and the grid. -->
     <ol class="panels">
-      <li class="panel tall tone-dots" id="work-01"><p class="cap">01. Bill Evans — 빌 에반스</p><img src="images/work-01.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of Bill Evans in glasses and a dark suit, looking down"></li>
-      <li class="panel tall tone-lines" id="work-02"><p class="cap">02. Chet Baker — 쳇 베이커</p><img src="images/work-02.jpg" width="1080" height="1389" loading="lazy" decoding="async" alt="Ink portrait of Chet Baker in black, holding his trumpet"></li>
-      <li class="panel tall tone-hatch cap-bottom" id="work-03"><p class="cap">03. Miles Davis — 마일스 데이비스</p><img src="images/work-04.jpg" width="1080" height="1389" loading="lazy" decoding="async" alt="Ink poster of Miles Davis playing the trumpet, with his name at the top"></li>
-      <li class="panel tall tone-blue" id="work-04"><p class="cap">04. Clifford Brown — 클리포드 브라운</p><img src="images/work-05.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of Clifford Brown in profile, eyes closed, holding his trumpet against his chest"></li>
-      <li class="panel tall tone-dots-dense" id="work-05"><p class="cap">05. John Coltrane — 존 콜트레인</p><img src="images/work-06.jpg" width="896" height="1152" loading="lazy" decoding="async" alt="Ink portrait of John Coltrane playing the saxophone, seen close up from the side"></li>
+      <li class="panel tall tone-dots" id="work-01"><p class="cap">01. Bill Evans</p><img src="images/work-01.jpg" width="896" height="1152" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of Bill Evans in glasses and a dark suit, looking down"><p class="panel-note" aria-hidden="true">Glasses, dark suit</p></li>
+      <li class="panel tall tone-lines" id="work-02"><p class="cap">02. Chet Baker</p><img src="images/work-02.jpg" width="1080" height="1389" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of Chet Baker in black, holding his trumpet"><p class="panel-note" aria-hidden="true">Trumpet in hand</p></li>
+      <li class="panel tall tone-hatch cap-bottom" id="work-03"><p class="cap">03. Miles Davis</p><img src="images/work-04.jpg" width="1080" height="1389" loading="lazy" decoding="async" fetchpriority="low" alt="Ink poster of Miles Davis playing the trumpet, with his name at the top"><p class="panel-note" aria-hidden="true">Poster with trumpet</p></li>
+      <li class="panel tall tone-blue" id="work-04"><p class="cap">04. Clifford Brown</p><img src="images/work-05.jpg" width="896" height="1152" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of Clifford Brown in profile, eyes closed, holding his trumpet against his chest"><p class="panel-note" aria-hidden="true">Profile, eyes closed</p></li>
+      <li class="panel tall tone-dots-dense" id="work-05"><p class="cap">05. John Coltrane</p><img src="images/work-06.jpg" width="896" height="1152" loading="lazy" decoding="async" fetchpriority="low" alt="Ink portrait of John Coltrane playing the saxophone, seen close up from the side"><p class="panel-note" aria-hidden="true">Saxophone, close up</p></li>
     </ol>
   </section>
 
   <section class="collage" aria-labelledby="collage-title">
     <div class="board">
       <h2 id="collage-title" class="mega fit">Design <br>&amp; Code</h2>
-      <a class="btn ghost" href="#contact">Get in touch</a>
+      <a class="btn ghost" href="#contact" data-jazz="snap">Get in touch</a>
       <div class="credits">
         <p>Drawn in ink,<br>played in blue</p>
-        <a href="#work">Works 01 to 05</a>
+        <a href="#work" data-jazz="pluck">Works 01 to 05</a>
       </div>
     </div>
   </section>
@@ -95,25 +124,89 @@
     <h2 id="contact-title" class="fit">Contact</h2>
     <p>Have a project in mind? Send an email and let's talk.</p>
     <div class="mail-row">
-      <a class="btn mail" href="mailto:hhiseog2@gmail.com">Email&nbsp;<span class="mail-addr">hhiseog2@gmail.com</span></a>
-      <button class="btn ghost-ink copy-mail" type="button" data-email="hhiseog2@gmail.com" aria-label="Copy email address">Copy</button>
+      <a class="btn mail" href="mailto:hhiseog2@gmail.com" data-jazz="stab">Email&nbsp;<span class="mail-addr">hhiseog2@gmail.com</span></a>
+      <button class="btn ghost-ink copy-mail" type="button" data-email="hhiseog2@gmail.com" aria-label="Copy email address" data-jazz="snap">Copy</button>
     </div>
     <p class="copy-status" role="status"></p>
   </section>
 </main>
 
+<div class="dock" data-shown="false">
+  <a class="btn dock-cta" href="#contact" data-jazz="stab">Get in touch</a>
+</div>
+
 <footer class="site">
   <div class="credits">
     <p>So What</p>
     <ul>
-      <li><a href="#work">Work</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="#work" data-jazz="pluck">Work</a></li>
+      <li><a href="#contact" data-jazz="pluck">Contact</a></li>
     </ul>
-    <p><a href="#main">Back to top</a></p>
+    <p><a href="#main" data-jazz="pluck">Back to top</a></p>
   </div>
 </footer>
 
+<script>
+// 3D first screen (rq-20260930-79e8d356, rq-20260930-42db6df6). The still picture is up from the start.
+// When the scene (src/hologram/scene.js, and three.js through it) is fetched:
+// - desktop (wide window, mouse): at idle time after the page has loaded, without waiting for an input — if the visitor has not asked
+//   to save data and the machine reports 4GB of memory or more. A browser that does not report memory waits for an input.
+// - phones, tablets, everything else: after the first real input (tap, click, key, wheel, scroll, or moving a mouse).
+// Either way only while the first screen is mostly in view, the book is not being turned and the tab is visible.
+// The input itself is never held up: the listeners are passive and only set a flag.
+// Reduced motion gets the scene too, as one still frame (the saxophonist at the front).
+// Skipped for the rest of the visit once this visit found no usable WebGL (no GPU, software renderer) or a machine too slow for it.
+(function(){
+  var hero = document.querySelector('.hero'), book = document.querySelector('.book');
+  if (!hero || !('IntersectionObserver' in window)) return;
+  var armed = false, asked = false, ratio = 0, known = null;
+  var EV = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll', 'pointermove'];
+  var gate = hero.__gate = { armedAt: 0, askedAt: 0, reason: '' };
+  function arm(how) {
+    if (armed) return;
+    EV.forEach(function(n){ window.removeEventListener(n, onInput, { capture: true }); });
+    // the visit's earlier verdict (no WebGL / software renderer / too slow) is read only when it matters
+    try { known = sessionStorage.getItem('sowhat-hero-gl'); } catch (err) {}
+    if (known) { hero.dataset.sceneWhy = known; return; }
+    armed = true; gate.armedAt = performance.now(); gate.firstInput = how;
+    setTimeout(tryStart, 0);                                                   // after the input has been handled
+  }
+  function onInput(e) {
+    if (e.type === 'pointermove' && e.pointerType !== 'mouse') return;      // a finger resting on the screen is not a choice
+    arm(e.type);
+  }
+  EV.forEach(function(n){ window.addEventListener(n, onInput, { passive: true, capture: true }); });
+  var desktop = window.matchMedia('(min-width: 769px) and (hover: hover) and (pointer: fine)').matches;
+  var saving = !!(navigator.connection && navigator.connection.saveData);
+  gate.auto = desktop && !saving && navigator.deviceMemory >= 4;
+  if (/[?&]holo=now\b/.test(location.search)) gate.auto = true;               // for measuring: load as if the visitor had touched the page
+  if (gate.auto) {
+    var idle = function(){ if ('requestIdleCallback' in window) requestIdleCallback(function(){ arm('idle'); }, { timeout: 2000 }); else setTimeout(function(){ arm('idle'); }, 200); };
+    if (document.readyState === 'complete') idle(); else window.addEventListener('load', idle, { once: true });
+  }
+  function bookBusy() { return !!(book && book.dataset.state && book.dataset.state !== 'idle'); }
+  function shown() { var r = hero.getBoundingClientRect(); return Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) / Math.max(1, r.height); }
+  function tryStart() {
+    if (!armed || asked || document.hidden || ratio < 0.6) return;
+    if (bookBusy()) { setTimeout(tryStart, 400); return; }                  // the page turn goes first
+    asked = true;
+    // decide at idle time, when a scroll that came with the first input has already moved the page
+    var go = function(){
+      if (shown() < 0.6 || document.hidden || bookBusy()) { asked = false; return; }   // moved on: wait until the first screen is back
+      gate.askedAt = performance.now();
+      import('./src/hologram/scene.js').then(function(m){ return m.activate(); }).catch(function(e){ gate.reason = 'load-failed'; console.warn('hero scene:', e); });
+    };
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 1200 }); else setTimeout(go, 150);
+  }
+  new IntersectionObserver(function(es){ ratio = es[es.length - 1].intersectionRatio; tryStart(); }, { threshold: [0, 0.6, 1] }).observe(hero);
+  document.addEventListener('visibilitychange', tryStart);
+})();
+</script>
 <script type="module" src="book.js"></script>
+<script>
+// click feedback (src/ui/jazz.js) loads after the page, so it never competes with the first screen
+window.addEventListener("load", function(){ import("./src/ui/jazz.js"); }, { once: true });
+</script>
 <script>
 (function(){
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -125,6 +218,8 @@
     mt.setAttribute('aria-pressed', playing ? 'false' : 'true');
   }
   if (reduce.matches) setMarquee(false);
+  // reduced motion switched on during the visit: the band stops as well (pressing it still plays it on purpose, see style.css)
+  reduce.addEventListener('change', function(){ if (reduce.matches) setMarquee(false); });
   mt.addEventListener('click', function(){ setMarquee(mq.dataset.state !== 'playing'); });
 
   // One loop (half the track) must be wider than the screen, or the end shows a gap and jumps back.
@@ -147,40 +242,6 @@
   }
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(buildMarquee);
   window.addEventListener('resize', buildMarquee);
-
-  // Hero video: no visible controls. Tapping the banner pauses and resumes it; the Pause button shows only when reached by keyboard.
-  // Reduced motion or blocked autoplay: the first frame stays up as a still poster.
-  var v = document.querySelector('.hero-video'), vt = document.querySelector('.video-toggle'), seam = document.querySelector('.hero-seam');
-  if (v) {
-    var hero = v.closest('.hero'), FADE = 0.5, HOLD = 0.2;
-    function cover(o){ seam.style.opacity = o; }
-    cover(1);                                  // until the first frame is on screen
-    vt.hidden = false;
-    function sync(){ vt.textContent = v.paused ? 'Play video' : 'Pause video'; vt.setAttribute('aria-pressed', v.paused ? 'true' : 'false'); }
-    function play(){ var p = v.play(); if (p && p.catch) p.catch(function(){ hero.classList.add('video-blocked'); cover(1); sync(); }); }
-    function toggle(){ if (v.paused) { hero.classList.remove('video-blocked'); play(); } else v.pause(); }
-    vt.addEventListener('click', toggle);
-    hero.addEventListener('click', function(e){ if (!e.target.closest('a,button')) toggle(); });
-    v.addEventListener('play', sync); v.addEventListener('pause', sync); sync();
-    if (reduce.matches) { v.removeAttribute('autoplay'); v.pause(); } else play();
-
-    // Loop seam: the first frame fades in on top over half a second and is fully opaque for the last 0.2s (the film's own fade to dark),
-    // so even if a slow device drops the last frames the wrap happens under a full cover.
-    // At the wrap the film shows that same frame (the title card holds still for 3s), so the cover drops without a visible change,
-    // and any black frame or stall while the browser jumps back stays hidden under it. One element, one download, no reload.
-    function shade(t){
-      var d = v.duration;
-      if (!(d > FADE) || v.paused) return;   // a paused film (blocked, reduced motion) keeps the poster up
-      cover(Math.min(1, Math.max(0, (t - (d - HOLD - FADE)) / FADE)));
-    }
-    if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
-      var onFrame = function(now, m){ shade(m.mediaTime); v.requestVideoFrameCallback(onFrame); };   // the frame actually on screen
-      v.requestVideoFrameCallback(onFrame);
-    } else {
-      v.addEventListener('playing', function(){ cover(0); });
-      (function tick(){ if (!v.paused) shade(v.currentTime); requestAnimationFrame(tick); })();
-    }
-  }
 
   // Poster titles run the full width of their block (the longest line fills it)
   var fits = document.querySelectorAll('.fit');
@@ -222,6 +283,27 @@
     if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function(){ copied(true); }, function(){ copied(legacyCopy(text)); });
     else copied(legacyCopy(text));
   });
+
+  // Top bar: once the band has scrolled away the bar sticks to the top and its ground turns see-through (style.css .is-stuck).
+  // Phones: the docked "Get in touch" comes up once the first screen is mostly scrolled past (that screen's one action is
+  // "See the work") and steps aside while the contact section is on screen — one filled button in view at a time.
+  if ('IntersectionObserver' in window) {
+    var head = document.querySelector('header.site'), dock = document.querySelector('.dock'), contact = document.getElementById('contact');
+    new IntersectionObserver(function(es){ head.classList.toggle('is-stuck', !es[es.length - 1].isIntersecting); }).observe(mq);
+    var hero = document.querySelector(".hero");
+    if (dock && contact && hero) {
+      var heroUp = true, contactUp = false;
+      var place = function(){
+        var shown = !heroUp && !contactUp;
+        dock.dataset.shown = String(shown);
+        if (!shown && dock.contains(document.activeElement)) (contactUp ? contact.querySelector('.btn') : document.querySelector('.hero-cue')).focus();   // never leave focus on a hidden button
+      };
+      new IntersectionObserver(function(es){ heroUp = es[es.length - 1].intersectionRatio >= 0.5; place(); }, { threshold: [0, 0.5, 1] }).observe(hero);
+      new IntersectionObserver(function(es){ contactUp = es[es.length - 1].isIntersecting; place(); }, { rootMargin: '0px 0px -80px 0px' }).observe(contact);
+    }
+  } else {
+    document.querySelector('.dock').dataset.shown = 'true';                  // no observer: keep the dock up
+  }
 
   // Menu: close after picking a link or pressing Escape
   var menu = document.querySelector('.menu');
